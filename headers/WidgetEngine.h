@@ -4,6 +4,7 @@
 #include <LayerShellQt/Window>
 
 #include <QApplication>
+#include <QPushButton>
 #include <QWidget>
 #include <QWindow>
 #include <QLayout>
@@ -47,10 +48,21 @@ class WidgetEngine {
      * @brief Qt6 window layout abstraction enum
      */
     enum class WindowLayout {
-      HorizontalBox = 0,
-      VerticalBox = 1,
-      Grid = 2,
-      //Form = 3
+      None = 0,
+      HorizontalBox = 1,
+      VerticalBox = 2,
+      Grid = 3,
+      //Form = 4
+    };
+
+    enum WidgetAlignment {
+      CenterH = Qt::AlignHCenter,
+      CenterV = Qt::AlignVCenter,
+      TopV = Qt::AlignTop,
+      BottomV = Qt::AlignBottom,
+      LeftH = Qt::AlignLeft,
+      RightH = Qt::AlignRight,
+      AlignmentNone = 0,
     };
 
     /**
@@ -72,6 +84,30 @@ class WidgetEngine {
     };
 
     /**
+     * @class Widget
+     * @brief base widget struct
+     *
+     */
+    struct Widget {
+      std::string name;
+    };
+
+    /**
+     * @class Button
+     * @brief button struct
+     *
+     */
+    struct Button : public Widget {
+      QPushButton* button = nullptr;
+      std::string text;
+    };
+
+    struct Label : public Widget {
+      QLabel* label = nullptr;
+      std::string text;
+    };
+
+    /**
      * @class WindowHandle
      * @brief simple Qt6 window hand;e
      *
@@ -80,7 +116,9 @@ class WidgetEngine {
       QWidget* window = nullptr;
       QFrame* frame = nullptr;
       QLayout* layout = nullptr;
+      std::vector<Widget> widgets;
     };
+
     
     WidgetEngine(int argc, char** argv);
     ~WidgetEngine() = default;
@@ -107,9 +145,16 @@ class WidgetEngine {
      */
     WindowHandle* GetWindow(const std::string& name);
 
-    void AddLabel(const std::string& name, const std::string& text);
+    void AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment);
     
-    void AddButton(const std::string& name, const std::string& text);
+    void AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment);
+
+    void ResizeWidget(const std::string& window, const std::string& name, unsigned int width, unsigned int height);
+
+    void MoveWidget(const std::string& window, const std::string& name, unsigned int x, unsigned int y);
+
+    void SetWidgetStyleSheet(const std::string& window, const std::string& name, const std::string& styleSheet);
+    void SetWindowStyleSheet(const std::string& window, const std::string& styleSheet);
 
     /**
      * @brief shows all windows

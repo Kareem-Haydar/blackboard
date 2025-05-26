@@ -33,7 +33,7 @@ void WidgetEngine::AddWindow(const WindowInfo& info) {
     handle->frame = new QFrame(handle->window);
     handle->layout->addWidget(handle->frame);
     //handle->frame->setLayout(handle->layout);
-  } else {
+  } else if (info.layout != WidgetEngine::WindowLayout::None) {
     std::cerr << "unknown window layout" << std::endl;
   }
 
@@ -85,6 +85,70 @@ void WidgetEngine::AddWindow(const WindowInfo& info) {
 
   handle->window->resize(info.width, info.height);
   windows.emplace(info.name, std::move(handle));
+}
+
+void WidgetEngine::AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment) {
+  WidgetEngine::WindowHandle* handle = GetWindow(window);
+  if (handle && handle->window && handle->window->isWindow()) {
+    QPushButton* button = new QPushButton(handle->window);
+    button->show();
+    button->setObjectName(QString::fromStdString(name));
+    button->setText(QString::fromStdString(text));
+    if (handle->layout) {
+      handle->layout->addWidget(button);
+    } 
+  }
+}
+
+void WidgetEngine::AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment) {
+  WidgetEngine::WindowHandle* handle = GetWindow(window);
+  if (handle && handle->window && handle->window->isWindow()) {
+    QLabel* label = new QLabel(handle->window);
+    label->show();
+    label->setObjectName(QString::fromStdString(name));
+    label->setText(QString::fromStdString(text));
+    if (handle->layout) {
+      handle->layout->addWidget(label);
+    }
+  }
+}
+
+void WidgetEngine::ResizeWidget(const std::string& window, const std::string& name, unsigned int width, unsigned int height) {
+  if (auto* handle = GetWindow(window)) {
+    if (handle->window && handle->window->isWindow()) {
+      if (auto* widget = handle->window->findChild<QWidget*>(QString::fromStdString(name))) {
+        widget->resize(width, height);
+      }
+    }
+  }
+}
+
+void WidgetEngine::MoveWidget(const std::string& window, const std::string& name, unsigned int x, unsigned int y) {
+  if (auto* handle = GetWindow(window)) {
+    if (handle->window && handle->window->isWindow()) {
+      if (auto* widget = handle->window->findChild<QWidget*>(QString::fromStdString(name))) {
+        widget->move(x, y);
+      }
+    }
+  }
+}
+
+void WidgetEngine::SetWidgetStyleSheet(const std::string& window, const std::string& name, const std::string& styleSheet) {
+  if (auto* handle = GetWindow(window)) {
+    if (handle->window && handle->window->isWindow()) {
+      if (auto* widget = handle->window->findChild<QWidget*>(QString::fromStdString(name))) {
+        widget->setStyleSheet(QString::fromStdString(styleSheet));
+      }
+    }
+  }
+}
+
+void WidgetEngine::SetWindowStyleSheet(const std::string& window, const std::string& styleSheet) {
+  if (auto* handle = GetWindow(window)) {
+    if (handle->window && handle->window->isWindow()) {
+      handle->window->setStyleSheet(QString::fromStdString(styleSheet));
+    }
+  }
 }
 
 WidgetEngine::WindowHandle* WidgetEngine::GetWindow(const std::string& name) {
