@@ -87,6 +87,21 @@ void WidgetEngine::AddWindow(const WindowInfo& info) {
   windows.emplace(info.name, std::move(handle));
 }
 
+std::array<int, 2> WidgetEngine::GetWindowSize(const std::string& name) {
+  WidgetEngine::WindowHandle* handle = GetWindow(name);
+  if (handle && handle->window && handle->window->isWindow()) {
+    return {handle->window->width(), handle->window->height()};
+  }
+  return {-1, -1};
+}
+
+void WidgetEngine::ResizeWindow(const std::string& name, unsigned int width, unsigned int height) {
+  WidgetEngine::WindowHandle* handle = GetWindow(name);
+  if (handle && handle->window && handle->window->isWindow()) {
+    handle->window->resize(width, height);
+  }
+}
+
 void WidgetEngine::AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment) {
   WidgetEngine::WindowHandle* handle = GetWindow(window);
   if (handle && handle->window && handle->window->isWindow()) {

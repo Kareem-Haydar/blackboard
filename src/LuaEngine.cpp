@@ -101,6 +101,14 @@ void LuaEngine::RegisterBindings() {
     this->HideWindow(name);
   });
 
+  lua.set_function("ResizeWindow", [this](const std::string& name, unsigned int width, unsigned int height) {
+    engine.ResizeWindow(name, width, height);    
+  });
+
+  lua.set_function("GetWindowSize", [this](const std::string& name) {
+      return engine.GetWindowSize(name);
+  });
+
   lua.set_function("ShowAll", [this]() {
     engine.ShowAll();
   });

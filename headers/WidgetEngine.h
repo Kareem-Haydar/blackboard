@@ -145,15 +145,77 @@ class WidgetEngine {
      */
     WindowHandle* GetWindow(const std::string& name);
 
+    /**
+     * @brief returns the size of a window
+     *
+     * @param name 
+     */
+    std::array<int, 2> GetWindowSize(const std::string& name);
+
+    /**
+     * @brief resizes a window
+     *
+     * @param name 
+     * @param width 
+     * @param height 
+     */
+    void ResizeWindow(const std::string& name, unsigned int width, unsigned int height);
+
+    /**
+     * @brief adds a label to a window
+     *
+     * @param window 
+     * @param name 
+     * @param text 
+     * @param alignment 
+     */
     void AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment);
     
+    /**
+     * @brief adds a button to a window
+     *
+     * @param window 
+     * @param name 
+     * @param text 
+     * @param alignment 
+     */
     void AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment);
 
+    /**
+     * @brief resizes a widget
+     *
+     * @param window 
+     * @param name 
+     * @param width 
+     * @param height 
+     */
     void ResizeWidget(const std::string& window, const std::string& name, unsigned int width, unsigned int height);
 
+    /**
+     * @brief moves a widget
+     *
+     * @param window 
+     * @param name 
+     * @param x 
+     * @param y 
+     */
     void MoveWidget(const std::string& window, const std::string& name, unsigned int x, unsigned int y);
 
+    /**
+     * @brief sets the style sheet of a widget
+     *
+     * @param window 
+     * @param name 
+     * @param styleSheet 
+     */
     void SetWidgetStyleSheet(const std::string& window, const std::string& name, const std::string& styleSheet);
+      
+    /**
+     * @brief sets the style sheet of a window
+     *
+     * @param window 
+     * @param styleSheet 
+     */
     void SetWindowStyleSheet(const std::string& window, const std::string& styleSheet);
 
     /**

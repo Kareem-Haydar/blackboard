@@ -11,23 +11,51 @@ pkg_check_modules(LUA REQUIRED lua)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets DBus WaylandClient)
 find_package(LayerShellQt REQUIRED)
 
-set(SOURCES
-  src/main.cpp
-  src/WidgetEngine.cpp
-  src/LuaEngine.cpp
-)
+option(BUILD_GREETER "build the greeter binary" OFF)
 
-set(HEADERS
-  headers/WidgetEngine.h
-  headers/LuaEngine.h
-  headers/NotificationListener.h
-)
+if (BUILD_GREETER)
+  message("building greeter")
+  set(SOURCES
+    src/WidgetEngine.cpp
+    src/LuaEngine.cpp
+    greeter/greeter.cpp
+  )
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+  set(HEADERS
+    headers/WidgetEngine.h
+    headers/LuaEngine.h
+  )
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  add_executable(blackboard ${SOURCES} ${HEADERS})
+
+  message("Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     remove_definitions("-mno-direct-extern-access")
-endif()
+  endif()
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LUA_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets LayerShellQt::Interface Qt6::DBus Qt6::WaylandClient ${LUA_LIBRARIES})
+  target_include_directories(blackboard PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LUA_INCLUDE_DIRS})
+  target_link_libraries(blackboard PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets LayerShellQt::Interface Qt6::DBus Qt6::WaylandClient ${LUA_LIBRARIES})
+else()
+  set(SOURCES
+    src/main.cpp
+    src/WidgetEngine.cpp
+    src/LuaEngine.cpp
+  )
+
+  set(HEADERS
+    headers/WidgetEngine.h
+    headers/LuaEngine.h
+  )
+
+  add_executable(blackboard ${SOURCES} ${HEADERS})
+
+  message("Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    remove_definitions("-mno-direct-extern-access")
+  endif()
+
+  target_include_directories(blackboard PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LUA_INCLUDE_DIRS})
+  target_link_libraries(blackboard PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets LayerShellQt::Interface Qt6::DBus Qt6::WaylandClient ${LUA_LIBRARIES})
+endif()

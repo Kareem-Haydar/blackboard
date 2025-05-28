@@ -27,5 +27,8 @@ SetWidgetStyleSheet(
   "background-color: rgba(255, 255, 255, 255); border: none; border-radius: 15px; font-weight: bold;"
 )
 
+local size = GetWindowSize("test")
+print("width: " .. size[1] .. " height: " .. size[2])
+
 ShowAll()
 Exec()

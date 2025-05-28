@@ -1,0 +1,3 @@
+/home/kareem/Desktop/Projects/blackboard/greeter-build/CMakeFiles/blackboard.dir
+/home/kareem/Desktop/Projects/blackboard/greeter-build/CMakeFiles/edit_cache.dir
+/home/kareem/Desktop/Projects/blackboard/greeter-build/CMakeFiles/rebuild_cache.dir
