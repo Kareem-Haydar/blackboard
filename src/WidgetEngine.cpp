@@ -4,6 +4,22 @@ WidgetEngine::WidgetEngine(int argc, char** argv) : app(argc, argv) {
   LayerShellQt::Shell::useLayerShell();
 }
 
+std::vector<WidgetEngine::MonitorInfo> WidgetEngine::GetMonitors() {
+  const auto screens = QApplication::screens();
+
+  std::vector<MonitorInfo> info;
+  info.resize(screens.size());
+
+  for (int i = 0; i < screens.size(); i++) {
+    info[i].index = i;
+    info[i].width = screens[i]->geometry().width();
+    info[i].height = screens[i]->geometry().height();
+    info[i].name = screens[i]->name().toStdString();
+  }
+
+  return info;
+}
+
 void WidgetEngine::AddWindow(const WindowInfo& info) {
   std::unique_ptr<WindowHandle> handle = std::make_unique<WindowHandle>();
 
@@ -11,6 +27,10 @@ void WidgetEngine::AddWindow(const WindowInfo& info) {
 
   handle->window->show();
   handle->window->hide();
+
+  if (info.screen >=0) {
+    handle->window->windowHandle()->setScreen(QApplication::screens()[info.screen]);
+  }
 
   handle->window->setWindowTitle(QString::fromStdString(info.name));
   handle->window->resize(info.width, info.height);
@@ -85,6 +105,20 @@ void WidgetEngine::AddWindow(const WindowInfo& info) {
 
   handle->window->resize(info.width, info.height);
   windows.emplace(info.name, std::move(handle));
+}
+
+void WidgetEngine::ShowWindow(const std::string& name) {
+  WidgetEngine::WindowHandle* handle = GetWindow(name);
+  if (handle && handle->window && handle->window->isWindow()) {
+    handle->window->show();
+  }
+}
+
+void WidgetEngine::HideWindow(const std::string& name) {
+  WidgetEngine::WindowHandle* handle = GetWindow(name);
+  if (handle && handle->window && handle->window->isWindow()) {
+    handle->window->hide();
+  }
 }
 
 std::array<int, 2> WidgetEngine::GetWindowSize(const std::string& name) {
@@ -163,6 +197,54 @@ void WidgetEngine::SetWindowStyleSheet(const std::string& window, const std::str
     if (handle->window && handle->window->isWindow()) {
       handle->window->setStyleSheet(QString::fromStdString(styleSheet));
     }
+  }
+}
+
+void WidgetEngine::AddAnimation(const std::string& name, const std::string& window, const std::string& widget, const std::string& property, unsigned int duration, int curve) {
+  WindowHandle* win = GetWindow(window);
+  if (win && win->window && win->window->isWindow()) {
+    if (auto* w = win->window->findChild<QWidget*>(QString::fromStdString(widget))) {
+      std::unique_ptr<QPropertyAnimation> anim(new QPropertyAnimation(w, QString::fromStdString(property).toUtf8()));
+      anim->setDuration(duration);
+      anim->setEasingCurve(QEasingCurve::Type(curve));
+
+      animations.emplace(name, std::move(anim));
+    }
+  }
+}
+
+void WidgetEngine::StartAnimation(const std::string& animation) {
+  auto it = animations.find(animation);
+  if (it != animations.end()) {
+    it->second->start();
+  }
+}
+
+void WidgetEngine::StopAnimation(const std::string& animation) {
+  auto it = animations.find(animation);
+  if (it != animations.end()) {
+    it->second->stop();
+  }
+}
+
+void WidgetEngine::SetAnimStartValueRect(const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
+  auto it = animations.find(animation);
+  if (it != animations.end()) {
+    it->second->setStartValue(QRect(x, y, width, height));
+  }
+}
+
+void WidgetEngine::SetAnimEndValueRect(const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
+  auto it = animations.find(animation);
+  if (it != animations.end()) {
+    it->second->setEndValue(QRect(x, y, width, height));
+  }
+}
+
+void WidgetEngine::SetAnimDirection(const std::string& animation, bool forward) {
+  auto it = animations.find(animation);
+  if (it != animations.end()) {
+    it->second->setDirection(forward ? QAbstractAnimation::Direction::Forward : QAbstractAnimation::Direction::Backward);
   }
 }
 

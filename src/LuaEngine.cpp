@@ -1,19 +1,9 @@
 #include <headers/LuaEngine.h>
 
-void LuaEngine::ShowWindow(const std::string& name) {
-  WidgetEngine::WindowHandle* handle = engine.GetWindow(name);
-  if (handle && handle->window && handle->window->isWindow()) handle->window->show();
-}
-
-void LuaEngine::HideWindow(const std::string& name) {
-  WidgetEngine::WindowHandle* handle = engine.GetWindow(name);
-  if (handle && handle->window && handle->window->isWindow()) handle->window->hide();
-}
-
 void LuaEngine::RegisterBindings() {
   lua["blackboard"] = lua.create_table();
 
-  lua["blackboard"]["StackingOrder"] = lua.create_table_with(
+  lua["blackboard"]["StackingOrderCpp"] = lua.create_table_with(
     "Top", WidgetEngine::StackingOrder::Top,
     "Bottom", WidgetEngine::StackingOrder::Bottom,
     "Background", WidgetEngine::StackingOrder::Background,
@@ -21,7 +11,7 @@ void LuaEngine::RegisterBindings() {
     "None", WidgetEngine::StackingOrder::None
   );
 
-  lua["blackboard"]["AnchorZone"] = lua.create_table_with(
+  lua["blackboard"]["AnchorZoneCpp"] = lua.create_table_with(
     "Top", WidgetEngine::AnchorZone::Top,
     "Bottom", WidgetEngine::AnchorZone::Bottom,
     "Left", WidgetEngine::AnchorZone::Left,
@@ -29,16 +19,27 @@ void LuaEngine::RegisterBindings() {
     "None", WidgetEngine::AnchorZone::None
   );
 
-  lua["blackboard"]["WindowLayout"] = lua.create_table_with(
+  lua["blackboard"]["WindowLayoutCpp"] = lua.create_table_with(
     "HorizontalBox", WidgetEngine::WindowLayout::HorizontalBox,
     "VerticalBox", WidgetEngine::WindowLayout::VerticalBox,
     "Grid", WidgetEngine::WindowLayout::Grid,
     "None", WidgetEngine::WindowLayout::None
   );
 
-  lua["blackboard"]["WindowInfo"] = lua.new_usertype<WidgetEngine::WindowInfo>("WindowInfo",
+
+  lua["blackboard"]["AnimCurveCpp"] = lua.create_table_with(
+    "inQuad", WidgetEngine::AnimCurve::InQuad,
+    "outQuad", WidgetEngine::AnimCurve::OutQuad,
+    "inOutQuad", WidgetEngine::AnimCurve::InOutQuad,
+    "inCubic", WidgetEngine::AnimCurve::InCubic,
+    "outCubic", WidgetEngine::AnimCurve::OutCubic,
+    "inOutCubic", WidgetEngine::AnimCurve::InOutCubic
+  );
+
+  lua["blackboard"]["WindowInfoCpp"] = lua.new_usertype<WidgetEngine::WindowInfo>("WindowInfo",
     sol::constructors<WidgetEngine::WindowInfo()>(),
     "name", &WidgetEngine::WindowInfo::name,
+    "screen", &WidgetEngine::WindowInfo::screen,
     "scope", &WidgetEngine::WindowInfo::scope,
     "width", &WidgetEngine::WindowInfo::width,
     "height", &WidgetEngine::WindowInfo::height,
@@ -56,11 +57,22 @@ void LuaEngine::RegisterBindings() {
     "layout", &WidgetEngine::WindowHandle::layout
   );
 
-  lua.set_function("AddWindow", [this](const WidgetEngine::WindowInfo& info) {
+  lua["blackboard"]["MonitorInfoCpp"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
+    "width", &WidgetEngine::MonitorInfo::width,
+    "height", &WidgetEngine::MonitorInfo::height,
+    "name", &WidgetEngine::MonitorInfo::name,
+    "index", &WidgetEngine::MonitorInfo::index
+  );
+
+  lua.set_function("GetMonitorsCpp", [this]() {
+    return engine.GetMonitors();
+  });
+
+  lua.set_function("AddWindowCpp", [this](const WidgetEngine::WindowInfo& info) {
     engine.AddWindow(info);
   });
 
-  lua.set_function("GetWindow", [this](const std::string& name) -> sol::optional<WidgetEngine::WindowHandle*> {
+  lua.set_function("GetWindowCpp", [this](const std::string& name) -> sol::optional<WidgetEngine::WindowHandle*> {
       WidgetEngine::WindowHandle* handle = engine.GetWindow(name);
       if (handle) {
         return handle;
@@ -69,19 +81,19 @@ void LuaEngine::RegisterBindings() {
       }
   });
 
-  lua.set_function("AddButton", [this](const std::string& window, const std::string& name, const std::string& text) {
+  lua.set_function("AddButtonCpp", [this](const std::string& window, const std::string& name, const std::string& text) {
     engine.AddButton(window, name, text, WidgetEngine::WidgetAlignment::AlignmentNone);
   });
 
-  lua.set_function("AddLabel", [this](const std::string& window, const std::string& name, const std::string& text) {
+  lua.set_function("AddLabelCpp", [this](const std::string& window, const std::string& name, const std::string& text) {
     engine.AddLabel(window, name, text, WidgetEngine::WidgetAlignment::AlignmentNone);    
   });
 
-  lua.set_function("MoveWidget", [this](const std::string& window, const std::string& name, unsigned int x, unsigned int y) {
+  lua.set_function("MoveWidgetCpp", [this](const std::string& window, const std::string& name, unsigned int x, unsigned int y) {
     engine.MoveWidget(window, name, x, y);
   });
 
-  lua.set_function("ResizeWidget", [this](const std::string& window, const std::string& name, unsigned int width, unsigned int height) {
+  lua.set_function("ResizeWidgetCpp", [this](const std::string& window, const std::string& name, unsigned int width, unsigned int height) {
     engine.ResizeWidget(window, name, width, height);
   });
 
@@ -94,11 +106,11 @@ void LuaEngine::RegisterBindings() {
   });
 
   lua.set_function("ShowWindow", [this](const std::string& name) {
-    this->ShowWindow(name);
+      engine.ShowWindow(name);
   });
 
   lua.set_function("HideWindow", [this](const std::string& name) {
-    this->HideWindow(name);
+    engine.HideWindow(name);
   });
 
   lua.set_function("ResizeWindow", [this](const std::string& name, unsigned int width, unsigned int height) {
@@ -107,6 +119,30 @@ void LuaEngine::RegisterBindings() {
 
   lua.set_function("GetWindowSize", [this](const std::string& name) {
       return engine.GetWindowSize(name);
+  });
+
+  lua.set_function("AddAnimation", [this](const std::string& name, const std::string& window, const std::string& widget, const std::string& property, unsigned int duration, int curve) {
+    engine.AddAnimation(name, window, widget, property, duration, curve);    
+  });
+
+  lua.set_function("SetAnimStartValueRect", [this](const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
+    engine.SetAnimStartValueRect(animation, x, y, width, height);
+  });
+
+  lua.set_function("SetAnimEndValueRect", [this](const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
+    engine.SetAnimEndValueRect(animation, x, y, width, height);
+  });
+
+  lua.set_function("SetAnimDirection", [this](const std::string& animation, bool forward) {
+    engine.SetAnimDirection(animation, forward);
+  });
+
+  lua.set_function("StartAnimation", [this](const std::string& animation) {
+    engine.StartAnimation(animation);
+  });
+
+  lua.set_function("StopAnimation", [this](const std::string& animation) {
+    engine.StopAnimation(animation);
   });
 
   lua.set_function("ShowAll", [this]() {
@@ -123,7 +159,26 @@ void LuaEngine::RegisterBindings() {
 }
 
 LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
-  lua.open_libraries(sol::lib::base, sol::lib::package, sol::lib::math, sol::lib::os);
+  lua.open_libraries(
+    sol::lib::base,
+    sol::lib::package,
+    sol::lib::coroutine,
+    sol::lib::string,
+    sol::lib::os,
+    sol::lib::math,
+    sol::lib::table,
+    sol::lib::debug,
+    sol::lib::io,
+    sol::lib::utf8
+  );
+
+  lua.script(R"(
+    local home = os.getenv("HOME")
+    package.path = package.path .. home .. "/.luarocks/share/lua/5.4/?.lua;" .. home .. "/.luarocks/share/lua/5.4/?/init.lua;" .. home .. "/luarocks/share/lua/5.4/?.lua;"
+    package.cpath = package.cpath .. home .. "/.luarocks/lib/lua/5.4/?.so;" .. home .. "/.luarocks/lib/lua/5.4/?.so;"
+  )");
+
+
   RegisterBindings();
 }
 

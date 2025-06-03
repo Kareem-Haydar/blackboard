@@ -5,10 +5,7 @@ class LuaEngine {
   private:
     WidgetEngine engine;
     sol::state lua;
-
-    void RegisterBindings();
-    void ShowWindow(const std::string& name);
-    void HideWindow(const std::string& name);
+   void RegisterBindings();
 
   public:
     LuaEngine(int argc, char** argv);

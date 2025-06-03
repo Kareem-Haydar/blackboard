@@ -1,8 +1,8 @@
-#pragma once
-
 #include <LayerShellQt/Shell>
 #include <LayerShellQt/Window>
 
+#include <QPropertyAnimation>
+#include <QEasingCurve>
 #include <QApplication>
 #include <QPushButton>
 #include <QWidget>
@@ -65,6 +65,16 @@ class WidgetEngine {
       AlignmentNone = 0,
     };
 
+    enum AnimCurve {
+      Linear = QEasingCurve::Linear,
+      InQuad = QEasingCurve::InQuad,
+      OutQuad = QEasingCurve::OutQuad,
+      InOutQuad = QEasingCurve::InOutQuad,
+      InCubic = QEasingCurve::InCubic,
+      OutCubic = QEasingCurve::OutCubic,
+      InOutCubic = QEasingCurve::InOutCubic
+    };
+
     /**
      * @class WindowInfo
      * @brief info struct for creating WindowHandles
@@ -72,6 +82,7 @@ class WidgetEngine {
      */
     struct WindowInfo {
       std::string name;
+      int screen;
       unsigned int width = 800;
       unsigned int height = 600;
       std::string scope;
@@ -119,6 +130,13 @@ class WidgetEngine {
       std::vector<Widget> widgets;
     };
 
+    struct MonitorInfo {
+      int index;
+      int width;
+      int height;
+      std::string name;
+    };
+
     
     WidgetEngine(int argc, char** argv);
     ~WidgetEngine() = default;
@@ -129,6 +147,8 @@ class WidgetEngine {
      * @return 
      */
     int Exec();
+
+    std::vector<MonitorInfo> GetMonitors();
 
     /**
      * @brief creates a new window handle and adds it to the table
@@ -160,6 +180,20 @@ class WidgetEngine {
      * @param height 
      */
     void ResizeWindow(const std::string& name, unsigned int width, unsigned int height);
+
+    /**
+     * @brief shows a window
+     *
+     * @param name 
+     */
+    void ShowWindow(const std::string& name);
+
+    /**
+     * @brief hides a window
+     *
+     * @param name 
+     */
+    void HideWindow(const std::string& name);
 
     /**
      * @brief adds a label to a window
@@ -219,6 +253,56 @@ class WidgetEngine {
     void SetWindowStyleSheet(const std::string& window, const std::string& styleSheet);
 
     /**
+     * @brief adds a property animation
+     *
+     * @param name 
+     * @param window 
+     * @param widget 
+     * @param property 
+     * @param duration 
+     * @param curve 
+     */
+    void AddAnimation(const std::string& name, const std::string& window, const std::string& widget, const std::string& property, unsigned int duration, int curve);
+
+    /**
+     * @brief starts an animation
+     *
+     * @param animation 
+     */
+    void StartAnimation(const std::string& animation);
+
+    /**
+     * @brief stops an animation
+     *
+     * @param animation 
+     */
+    void StopAnimation(const std::string& animation);
+
+    /**
+     * @brief sets the start value of an animation (rectangle)
+     *
+     * @param animation 
+     * @param x 
+     * @param y 
+     * @param width 
+     * @param height 
+     */
+    void SetAnimStartValueRect(const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+
+    /**
+     * @brief sets the end value of an animation (rectangle)
+     *
+     * @param animation 
+     * @param x 
+     * @param y 
+     * @param width 
+     * @param height 
+     */
+    void SetAnimEndValueRect(const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+
+    void SetAnimDirection(const std::string& animation, bool forward);
+
+    /**
      * @brief shows all windows
      */
     void ShowAll();
@@ -230,5 +314,6 @@ class WidgetEngine {
 
   private:
     QApplication app;
+    std::unordered_map<std::string, std::unique_ptr<QPropertyAnimation>> animations;
     std::unordered_map<std::string, std::unique_ptr<WindowHandle>> windows; 
 };
