@@ -11,38 +11,32 @@ if data and data["Desktop Entry"] then
     print("Icon:", entry.Icon)
 end
 
-local screens = GetMonitors()
-local windows = {}
+local blackboard = require("blackboard")
+local screens = blackboard.get_monitors()
 
-for i, v in ipairs(screens) do
-  windows[v.name] = WindowInfo.new()
-  windows[v.name].name = "topbar_" .. v.index
-  windows[v.name].screen = v.index
-  windows[v.name].scope = ""
-  windows[v.name].width = v.width
-  windows[v.name].height = 100
-  windows[v.name].order = blackboard.StackingOrder.Bottom
-  windows[v.name].anchorZone = blackboard.AnchorZone.Top
-  windows[v.name].layout = blackboard.WindowLayout.None
-  windows[v.name].anchorArea = 30
+if screens ~= nil then
+  for _, screen in pairs(screens) do
+    print("------------------------------------")
+    print("Screen name:", screen.name)
+    print("Screen width:", screen.width)
+    print("Screen height:", screen.height)
+  end
 
-  print("creating window " .. windows[v.name].name)
-
-  AddWindow(windows[v.name])
-
-  SetWindowStyleSheet(
-    windows[v.name].name,
-    "background-color: rgba(100, 100, 100, 0);"
-  )
-
-  AddButton(windows[v.name].name, "power", "󰤆")
-  ResizeWidget(windows[v.name].name, "power", 30, 30)
-  SetWidgetStyleSheet(
-    windows[v.name].name,
-    "power",
-    "background-color: rgba(255, 255, 255, 255); border-radius: 15px"
-  )
+  print("------------------------------------")
 end
 
-ShowAll()
-Exec()
+local window = blackboard.window_info.new()
+window.name = "blackboard"
+window.screen = screens[2].index
+window.width = 800
+window.height = 600
+window.stacking_order = blackboard.stacking_order.bottom
+window.anchor_zone = blackboard.anchor_zone.bottom
+window.anchor_area = 30
+window.padding_inner = 5
+window.padding_outer = 5
+
+blackboard.add_window(window)
+blackboard.show_window("blackboard")
+
+blackboard.exec()

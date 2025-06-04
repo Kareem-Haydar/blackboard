@@ -1,6 +1,7 @@
 local blackboard = {}
 
 blackboard.stacking_order = {
+  none = StackingOrderCpp.None,
   top = StackingOrderCpp.Top,
   bottom = StackingOrderCpp.Bottom,
   left = StackingOrderCpp.Left,
@@ -8,6 +9,7 @@ blackboard.stacking_order = {
 }
 
 blackboard.anchor_zone = {
+  none = AnchorZoneCpp.None,
   top = AnchorZoneCpp.Top,
   bottom = AnchorZoneCpp.Bottom,
   left = AnchorZoneCpp.Left,
@@ -33,15 +35,28 @@ blackboard.window_info = {}
 blackboard.window_info.__index = blackboard.window_info
 
 function blackboard.window_info.new()
-  local obj = WindowInfoCpp.new()
-  local proxy = {}
+  local self = {}
+  self._cobj = WindowInfoCpp.new()
+
+  local proxy = {
+    name = "",
+    width = 0,
+    height = 0,
+    screen = "",
+    stacking_order = blackboard.stacking_order.none,
+    anchor_area = 0,
+    anchor_zone = blackboard.anchor_zone.none,
+    padding_inner = 0,
+    padding_outer = 0,
+    layout = blackboard.window_layout.none
+  }
 
   setmetatable(proxy, {
     __index = function(_, key)
-      return obj[key]
+      return self._cobj[key]
     end,
     __newindex = function(_, key, value)
-      obj[key] = value
+      rawset(proxy, key, value)
     end
   })
 
@@ -52,15 +67,23 @@ blackboard.monitor_info = {}
 blackboard.monitor_info.__index = blackboard.monitor_info
 
 function blackboard.monitor_info.new()
-  local obj = MonitorInfoCpp.new()
-  local proxy = {}
+  local self = {}
+  self._cobj = MonitorInfoCpp.new()
+
+  local proxy = {
+    name = "",
+    index = 0,
+    width = 0,
+    height = 0
+  }
+
 
   setmetatable(proxy, {
     __index = function(_, key)
-      return obj[key]
+      return self._cobj[key]
     end,
     __newindex = function(_, key, value)
-      obj[key] = value
+      rawset(proxy, key, value)
     end
   })
 
@@ -72,7 +95,71 @@ blackboard.get_monitors = function ()
 end
 
 blackboard.add_window = function (info)
-  AddWindowCpp(info)
+  local wininfo = WindowInfoCpp.new()
+
+  if info.name then
+    wininfo.name = info.name
+  end
+
+  if info.screen then
+    wininfo.screen = info.screen
+  end
+
+  if info.scope then
+    wininfo.scope = info.scope
+  end
+
+  if info.width then
+    wininfo.width = info.width
+  end
+
+  if info.height then
+    wininfo.height = info.height
+  end
+
+  if info.stacking_order then
+    wininfo.order = info.stacking_order
+  end
+
+  if info.anchor_area then
+    wininfo.anchorArea = info.anchor_area
+  end
+
+  if info.anchor_zone then
+    wininfo.anchorZone = info.anchor_zone
+  end
+
+  if info.padding_inner then
+    wininfo.paddingInner = info.padding_inner
+  end
+
+  if info.padding_outer then
+    wininfo.paddingOuter = info.padding_outer
+  end
+
+  if info.layout then
+    wininfo.layout = info.layout
+  else
+    wininfo.layout = WindowLayoutCpp.None
+  end
+
+  AddWindowCpp(wininfo)
+end
+
+blackboard.show_window = function (name)
+  ShowWindowCpp(name)
+end
+
+blackboard.hide_window = function (name)
+  HideWindowCpp(name)
+end
+
+blackboard.show_all_windows = function ()
+  ShowAllCpp()
+end
+
+blackboard.hide_all_windows = function ()
+  HideAllCpp()
 end
 
 blackboard.add_button = function (window, name, text)
@@ -81,6 +168,10 @@ end
 
 blackboard.add_label = function (window, name, text)
   AddLabelCpp(window, name, text)
+end
+
+blackboard.exec = function ()
+  ExecCpp()
 end
 
 return blackboard

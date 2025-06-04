@@ -1,9 +1,8 @@
 #include <headers/LuaEngine.h>
 
 void LuaEngine::RegisterBindings() {
-  lua["blackboard"] = lua.create_table();
 
-  lua["blackboard"]["StackingOrderCpp"] = lua.create_table_with(
+  lua["StackingOrderCpp"] = lua.create_table_with(
     "Top", WidgetEngine::StackingOrder::Top,
     "Bottom", WidgetEngine::StackingOrder::Bottom,
     "Background", WidgetEngine::StackingOrder::Background,
@@ -11,7 +10,7 @@ void LuaEngine::RegisterBindings() {
     "None", WidgetEngine::StackingOrder::None
   );
 
-  lua["blackboard"]["AnchorZoneCpp"] = lua.create_table_with(
+  lua["AnchorZoneCpp"] = lua.create_table_with(
     "Top", WidgetEngine::AnchorZone::Top,
     "Bottom", WidgetEngine::AnchorZone::Bottom,
     "Left", WidgetEngine::AnchorZone::Left,
@@ -19,7 +18,7 @@ void LuaEngine::RegisterBindings() {
     "None", WidgetEngine::AnchorZone::None
   );
 
-  lua["blackboard"]["WindowLayoutCpp"] = lua.create_table_with(
+  lua["WindowLayoutCpp"] = lua.create_table_with(
     "HorizontalBox", WidgetEngine::WindowLayout::HorizontalBox,
     "VerticalBox", WidgetEngine::WindowLayout::VerticalBox,
     "Grid", WidgetEngine::WindowLayout::Grid,
@@ -27,7 +26,7 @@ void LuaEngine::RegisterBindings() {
   );
 
 
-  lua["blackboard"]["AnimCurveCpp"] = lua.create_table_with(
+  lua["AnimCurveCpp"] = lua.create_table_with(
     "inQuad", WidgetEngine::AnimCurve::InQuad,
     "outQuad", WidgetEngine::AnimCurve::OutQuad,
     "inOutQuad", WidgetEngine::AnimCurve::InOutQuad,
@@ -36,7 +35,7 @@ void LuaEngine::RegisterBindings() {
     "inOutCubic", WidgetEngine::AnimCurve::InOutCubic
   );
 
-  lua["blackboard"]["WindowInfoCpp"] = lua.new_usertype<WidgetEngine::WindowInfo>("WindowInfo",
+  lua["WindowInfoCpp"] = lua.new_usertype<WidgetEngine::WindowInfo>("WindowInfo",
     sol::constructors<WidgetEngine::WindowInfo()>(),
     "name", &WidgetEngine::WindowInfo::name,
     "screen", &WidgetEngine::WindowInfo::screen,
@@ -51,13 +50,13 @@ void LuaEngine::RegisterBindings() {
     "layout", &WidgetEngine::WindowInfo::layout
   );
 
-  lua["blackboard"]["WindowHandle"] = lua.new_usertype<WidgetEngine::WindowHandle>("WindowHandle",
+  lua["WindowHandle"] = lua.new_usertype<WidgetEngine::WindowHandle>("WindowHandle",
     "window", &WidgetEngine::WindowHandle::window ,
     "frame", &WidgetEngine::WindowHandle::frame,
     "layout", &WidgetEngine::WindowHandle::layout
   );
 
-  lua["blackboard"]["MonitorInfoCpp"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
+  lua["MonitorInfoCpp"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
     "width", &WidgetEngine::MonitorInfo::width,
     "height", &WidgetEngine::MonitorInfo::height,
     "name", &WidgetEngine::MonitorInfo::name,
@@ -105,11 +104,11 @@ void LuaEngine::RegisterBindings() {
     engine.SetWindowStyleSheet(window, styleSheet);
   });
 
-  lua.set_function("ShowWindow", [this](const std::string& name) {
+  lua.set_function("ShowWindowCpp", [this](const std::string& name) {
       engine.ShowWindow(name);
   });
 
-  lua.set_function("HideWindow", [this](const std::string& name) {
+  lua.set_function("HideWindowCpp", [this](const std::string& name) {
     engine.HideWindow(name);
   });
 
@@ -145,15 +144,15 @@ void LuaEngine::RegisterBindings() {
     engine.StopAnimation(animation);
   });
 
-  lua.set_function("ShowAll", [this]() {
+  lua.set_function("ShowAllCpp", [this]() {
     engine.ShowAll();
   });
 
-  lua.set_function("HideAll", [this]() {
+  lua.set_function("HideAllCpp", [this]() {
     engine.HideAll();
   });
 
-  lua.set_function("Exec", [this]() {
+  lua.set_function("ExecCpp", [this]() {
     return engine.Exec();
   });
 }
@@ -174,7 +173,7 @@ LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
 
   lua.script(R"(
     local home = os.getenv("HOME")
-    package.path = package.path .. home .. "/.luarocks/share/lua/5.4/?.lua;" .. home .. "/.luarocks/share/lua/5.4/?/init.lua;" .. home .. "/luarocks/share/lua/5.4/?.lua;"
+    package.path = package.path .. home .. "/.luarocks/share/lua/5.4/?.lua;" .. home .. "/.luarocks/share/lua/5.4/?/init.lua;" .. home .. "/luarocks/share/lua/5.4/?.lua;" .. home .. "/Desktop/Projects/blackboard/src/scripts/?.lua;"
     package.cpath = package.cpath .. home .. "/.luarocks/lib/lua/5.4/?.so;" .. home .. "/.luarocks/lib/lua/5.4/?.so;"
   )");
 
