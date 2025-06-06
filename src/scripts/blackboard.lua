@@ -174,4 +174,34 @@ blackboard.exec = function ()
   ExecCpp()
 end
 
+local function add_window(info)
+  local wininfo = WindowInfoCpp.new()
+
+  wininfo.name = info.name or ""
+  wininfo.screen = info.screen or 0
+  wininfo.scope = info.scope or ""
+  wininfo.width = info.width or 0
+  wininfo.height = info.height or 0
+  wininfo.order = info.stacking_order or blackboard.stacking_order.none
+  wininfo.anchorArea = info.anchor_area or 0
+  wininfo.anchorZone = info.anchor_zone or blackboard.anchor_zone.none
+  wininfo.paddingInner = info.padding_inner or 0
+  wininfo.paddingOuter = info.padding_outer or 0
+  wininfo.layout = info.layout or blackboard.window_layout.none
+
+  AddWindowCpp(wininfo)
+end
+
+function Window(info)
+  assert(info.name)
+  assert(info.width)
+  assert(info.height)
+
+  add_window(info)
+
+  if info.on_create then
+    info.on_create({ name = info.name, width = info.width, height = info.height, screen = info.screen })
+  end
+end
+
 return blackboard
