@@ -8,8 +8,10 @@
 #include <QWidget>
 #include <QWindow>
 #include <QLayout>
+#include <QObject>
 #include <QFrame>
 #include <QLabel>
+#include <QTimer>
 
 #include <unordered_map>
 #include <iostream>
@@ -137,6 +139,7 @@ class WidgetEngine {
       std::string name;
     };
 
+    std::unordered_map<std::string, std::unique_ptr<WindowHandle>> windows; 
     
     WidgetEngine(int argc, char** argv);
     ~WidgetEngine() = default;
@@ -315,5 +318,4 @@ class WidgetEngine {
   private:
     QApplication app;
     std::unordered_map<std::string, std::unique_ptr<QPropertyAnimation>> animations;
-    std::unordered_map<std::string, std::unique_ptr<WindowHandle>> windows; 
 };

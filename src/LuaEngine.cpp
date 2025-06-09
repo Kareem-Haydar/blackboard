@@ -1,38 +1,80 @@
 #include <headers/LuaEngine.h>
 
+void LuaEngine::RegisterWindow(const WidgetEngine::WindowInfo& info, sol::function on_frame) {
+  engine.AddWindow(info);
+  if (on_frame.valid()) {
+    on_frame_callbacks.push_back(std::move(on_frame));
+  }
+}
+
+void LuaEngine::RegisterButton(const std::string& window, const std::string& name, const std::string& text, sol::function on_frame) {
+  engine.AddButton(window, name, text, WidgetEngine::WidgetAlignment::AlignmentNone);
+  if (on_frame.valid()) {
+    on_frame_callbacks.push_back(std::move(on_frame));
+  }
+}
+
+void LuaEngine::CallOnFrameCallbacks() {
+  auto it = on_frame_callbacks.begin();
+  while (it != on_frame_callbacks.end()) {
+    sol::protected_function_result result = (*it)();
+    if (!result.valid()) {
+      sol::error err = result;
+      std::cerr << "Lua error: " << err.what() << std::endl;
+      it = on_frame_callbacks.erase(it);  
+    } else {
+      ++it;
+    }
+  }
+}
+
+void LuaEngine::ProcessChildWidget(sol::table widget, const std::string& window) {
+  sol::optional<std::string> type = widget["__type"];
+  if (!type) {
+    std::cerr << "Widget has no type" << std::endl;
+    return;
+  } 
+
+  std::string widgetType = type.value();
+
+  if (widgetType == "Button") {
+    sol::optional<sol::function> on_frame = widget["on_frame"];
+    RegisterButton(window, widget.get_or("name", std::string("")), widget.get_or("text", std::string("")),  on_frame.value_or(sol::nil));
+  }
+}
+
 void LuaEngine::RegisterBindings() {
-
-  lua["StackingOrderCpp"] = lua.create_table_with(
-    "Top", WidgetEngine::StackingOrder::Top,
-    "Bottom", WidgetEngine::StackingOrder::Bottom,
-    "Background", WidgetEngine::StackingOrder::Background,
-    "Overlay", WidgetEngine::StackingOrder::Overlay,
-    "None", WidgetEngine::StackingOrder::None
+  lua["stacking_order"] = lua.create_table_with(
+    "top", WidgetEngine::StackingOrder::Top,
+    "bottom", WidgetEngine::StackingOrder::Bottom,
+    "background", WidgetEngine::StackingOrder::Background,
+    "overlay", WidgetEngine::StackingOrder::Overlay,
+    "none", WidgetEngine::StackingOrder::None
   );
 
-  lua["AnchorZoneCpp"] = lua.create_table_with(
-    "Top", WidgetEngine::AnchorZone::Top,
-    "Bottom", WidgetEngine::AnchorZone::Bottom,
-    "Left", WidgetEngine::AnchorZone::Left,
-    "Right", WidgetEngine::AnchorZone::Right,
-    "None", WidgetEngine::AnchorZone::None
+  lua["anchor_zone"] = lua.create_table_with(
+    "top", WidgetEngine::AnchorZone::Top,
+    "bottom", WidgetEngine::AnchorZone::Bottom,
+    "left", WidgetEngine::AnchorZone::Left,
+    "right", WidgetEngine::AnchorZone::Right,
+    "none", WidgetEngine::AnchorZone::None
   );
 
-  lua["WindowLayoutCpp"] = lua.create_table_with(
-    "HorizontalBox", WidgetEngine::WindowLayout::HorizontalBox,
-    "VerticalBox", WidgetEngine::WindowLayout::VerticalBox,
-    "Grid", WidgetEngine::WindowLayout::Grid,
-    "None", WidgetEngine::WindowLayout::None
+  lua["layout"] = lua.create_table_with(
+    "hbox", WidgetEngine::WindowLayout::HorizontalBox,
+    "vbox", WidgetEngine::WindowLayout::VerticalBox,
+    "grid", WidgetEngine::WindowLayout::Grid,
+    "none", WidgetEngine::WindowLayout::None
   );
 
 
-  lua["AnimCurveCpp"] = lua.create_table_with(
-    "inQuad", WidgetEngine::AnimCurve::InQuad,
-    "outQuad", WidgetEngine::AnimCurve::OutQuad,
-    "inOutQuad", WidgetEngine::AnimCurve::InOutQuad,
-    "inCubic", WidgetEngine::AnimCurve::InCubic,
-    "outCubic", WidgetEngine::AnimCurve::OutCubic,
-    "inOutCubic", WidgetEngine::AnimCurve::InOutCubic
+  lua["anim_curve"] = lua.create_table_with(
+    "in_quad", WidgetEngine::AnimCurve::InQuad,
+    "out_quad", WidgetEngine::AnimCurve::OutQuad,
+    "in_out_quad", WidgetEngine::AnimCurve::InOutQuad,
+    "in_cubic", WidgetEngine::AnimCurve::InCubic,
+    "out_cubic", WidgetEngine::AnimCurve::OutCubic,
+    "in_out_cubic", WidgetEngine::AnimCurve::InOutCubic
   );
 
   lua["WindowInfoCpp"] = lua.new_usertype<WidgetEngine::WindowInfo>("WindowInfo",
@@ -56,104 +98,54 @@ void LuaEngine::RegisterBindings() {
     "layout", &WidgetEngine::WindowHandle::layout
   );
 
-  lua["MonitorInfoCpp"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
+  lua["monitor"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
     "width", &WidgetEngine::MonitorInfo::width,
     "height", &WidgetEngine::MonitorInfo::height,
     "name", &WidgetEngine::MonitorInfo::name,
     "index", &WidgetEngine::MonitorInfo::index
   );
 
-  lua.set_function("GetMonitorsCpp", [this]() {
-    return engine.GetMonitors();
+  lua.set_function("ButtonCpp", [this](sol::table args) {
+    sol::optional<sol::function> on_frame = args["on_frame"];
+    RegisterButton(args.get_or("window", std::string("")), args.get_or("name", std::string("")), args.get_or("text", std::string("")), on_frame.value_or(sol::nil));
   });
 
-  lua.set_function("AddWindowCpp", [this](const WidgetEngine::WindowInfo& info) {
-    engine.AddWindow(info);
-  });
+  lua.set_function("Window", [this](sol::table args) {
+    WidgetEngine::WindowInfo info;
 
-  lua.set_function("GetWindowCpp", [this](const std::string& name) -> sol::optional<WidgetEngine::WindowHandle*> {
-      WidgetEngine::WindowHandle* handle = engine.GetWindow(name);
-      if (handle) {
-        return handle;
-      } else {
-        return sol::nullopt;
+    info.name = args.get_or("name", std::string(""));
+    info.screen = args.get_or("screen", 0);
+    info.width = args.get_or("width", 800);
+    info.height = args.get_or("height", 600);
+    info.scope = args.get_or("scope", std::string(""));
+    info.order = args.get_or("order", WidgetEngine::StackingOrder::None);
+    info.anchorArea = args.get_or("anchor_area", 0);
+    info.paddingOuter = args.get_or("padding_outer", 0);
+    info.paddingInner = args.get_or("padding_inner", 0);
+    info.anchorZone = args.get_or("anchor_zone", WidgetEngine::AnchorZone::None);
+    info.layout = args.get_or("layout", WidgetEngine::WindowLayout::None);
+
+    sol::optional<sol::function> on_frame = args["on_frame"];
+    RegisterWindow(info, on_frame.value_or(sol::nil));
+
+    bool visible = args.get_or("visible", true);
+    if (visible) {
+      engine.ShowWindow(info.name);
+    }
+
+    for (auto& kv : args) {
+      sol::object k = kv.first;
+      sol::object v = kv.second;
+
+      if (v.get_type() == sol::type::table) {
+        sol::table child = v.as<sol::table>();
+
+        sol::optional<std::string> type = child["__type"];
+        if (type) {
+          ProcessChildWidget(child, info.name);
+        }
       }
-  });
-
-  lua.set_function("AddButtonCpp", [this](const std::string& window, const std::string& name, const std::string& text) {
-    engine.AddButton(window, name, text, WidgetEngine::WidgetAlignment::AlignmentNone);
-  });
-
-  lua.set_function("AddLabelCpp", [this](const std::string& window, const std::string& name, const std::string& text) {
-    engine.AddLabel(window, name, text, WidgetEngine::WidgetAlignment::AlignmentNone);    
-  });
-
-  lua.set_function("MoveWidgetCpp", [this](const std::string& window, const std::string& name, unsigned int x, unsigned int y) {
-    engine.MoveWidget(window, name, x, y);
-  });
-
-  lua.set_function("ResizeWidgetCpp", [this](const std::string& window, const std::string& name, unsigned int width, unsigned int height) {
-    engine.ResizeWidget(window, name, width, height);
-  });
-
-  lua.set_function("SetWidgetStyleSheet", [this](const std::string& window, const std::string& name, const std::string& styleSheet) {
-    engine.SetWidgetStyleSheet(window, name, styleSheet);
-  });
-
-  lua.set_function("SetWindowStyleSheet", [this](const std::string& window, const std::string& styleSheet) {
-    engine.SetWindowStyleSheet(window, styleSheet);
-  });
-
-  lua.set_function("ShowWindowCpp", [this](const std::string& name) {
-      engine.ShowWindow(name);
-  });
-
-  lua.set_function("HideWindowCpp", [this](const std::string& name) {
-    engine.HideWindow(name);
-  });
-
-  lua.set_function("ResizeWindow", [this](const std::string& name, unsigned int width, unsigned int height) {
-    engine.ResizeWindow(name, width, height);    
-  });
-
-  lua.set_function("GetWindowSize", [this](const std::string& name) {
-      return engine.GetWindowSize(name);
-  });
-
-  lua.set_function("AddAnimation", [this](const std::string& name, const std::string& window, const std::string& widget, const std::string& property, unsigned int duration, int curve) {
-    engine.AddAnimation(name, window, widget, property, duration, curve);    
-  });
-
-  lua.set_function("SetAnimStartValueRect", [this](const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
-    engine.SetAnimStartValueRect(animation, x, y, width, height);
-  });
-
-  lua.set_function("SetAnimEndValueRect", [this](const std::string& animation, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
-    engine.SetAnimEndValueRect(animation, x, y, width, height);
-  });
-
-  lua.set_function("SetAnimDirection", [this](const std::string& animation, bool forward) {
-    engine.SetAnimDirection(animation, forward);
-  });
-
-  lua.set_function("StartAnimation", [this](const std::string& animation) {
-    engine.StartAnimation(animation);
-  });
-
-  lua.set_function("StopAnimation", [this](const std::string& animation) {
-    engine.StopAnimation(animation);
-  });
-
-  lua.set_function("ShowAllCpp", [this]() {
-    engine.ShowAll();
-  });
-
-  lua.set_function("HideAllCpp", [this]() {
-    engine.HideAll();
-  });
-
-  lua.set_function("ExecCpp", [this]() {
-    return engine.Exec();
+    }
   });
 }
 
@@ -177,14 +169,40 @@ LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
     package.cpath = package.cpath .. home .. "/.luarocks/lib/lua/5.4/?.so;" .. home .. "/.luarocks/lib/lua/5.4/?.so;"
   )");
 
+  lua.script(R"(
+    function Button (args)
+      args = args or {}
+      args.__type = "Button"
+
+      return args
+    end
+  )");
 
   RegisterBindings();
+
+  std::string scriptPath = std::string(getenv("HOME")) + "/.config/blackboard";
+
+  for (const auto& entry : std::filesystem::directory_iterator(scriptPath)) {
+    if (entry.path().extension() == ".lua") {
+      try {
+        lua.script_file(entry.path().string());
+      } catch (const sol::error& err) {
+        std::cerr << "Lua error: " << err.what() << std::endl;
+      }
+    }
+  }
+
+  frameTimer = new QTimer(nullptr);
+  QObject::connect(frameTimer, &QTimer::timeout, frameTimer, [this]() {
+    CallOnFrameCallbacks();
+  });
+  frameTimer->start(1000 / 120);
 }
 
-void LuaEngine::RunScript(const std::string& scriptPath) {
-  try {
-    lua.script_file(scriptPath);
-  } catch (const sol::error& err) {
-    std::cerr << "Lua error: " << err.what() << std::endl;
-  }
+LuaEngine::~LuaEngine() {
+  delete frameTimer;
+}
+
+int LuaEngine::Exec() {
+  return engine.Exec();
 }
