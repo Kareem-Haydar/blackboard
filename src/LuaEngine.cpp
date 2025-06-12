@@ -1,23 +1,40 @@
 #include <headers/LuaEngine.h>
 
-void LuaEngine::RegisterWindow(const WidgetEngine::WindowInfo& info, sol::function on_frame) {
-  engine.AddWindow(info);
-  if (on_frame.valid()) {
-    on_frame_callbacks.push_back(std::move(on_frame));
-  }
-}
+void LuaEngine::RegisterWindow(sol::table args) {
+  WidgetEngine::WindowInfo info;
 
-void LuaEngine::RegisterButton(const std::string& window, const std::string& name, const std::string& text, sol::function on_frame) {
-  engine.AddButton(window, name, text, WidgetEngine::WidgetAlignment::AlignmentNone);
-  if (on_frame.valid()) {
-    on_frame_callbacks.push_back(std::move(on_frame));
+  std::string id = args.get_or("id", std::string(""));
+
+  info.name = id;
+  info.screen = args.get_or("screen", 0);
+  info.width = args.get_or("width", 800);
+  info.height = args.get_or("height", 600);
+  info.scope = args.get_or("scope", std::string(""));
+  info.order = args.get_or("order", WidgetEngine::StackingOrder::None);
+  info.anchorArea = args.get_or("anchor_area", 0);
+  info.paddingOuter = args.get_or("padding_outer", 0);
+  info.paddingInner = args.get_or("padding_inner", 0);
+  info.anchorZone = args.get_or("anchor_zone", WidgetEngine::AnchorZone::None);
+  info.layout = args.get_or("layout", WidgetEngine::WindowLayout::None);
+
+  engine.AddWindow(info);
+  engine.ShowWindow(info.name);
+
+  sol::optional<sol::function> on_frame = args["on_frame"];
+  if (on_frame) {
+    if (on_frame.value().valid()) {
+      on_frame_callbacks.insert(std::make_pair(id, on_frame.value()));
+    }
   }
+
+  widget_registry.insert(std::make_pair(id, args));
 }
 
 void LuaEngine::CallOnFrameCallbacks() {
   auto it = on_frame_callbacks.begin();
   while (it != on_frame_callbacks.end()) {
-    sol::protected_function_result result = (*it)();
+    sol::table self = widget_registry.find(it->first)->second;
+    sol::protected_function_result result = it->second(self);
     if (!result.valid()) {
       sol::error err = result;
       std::cerr << "Lua error: " << err.what() << std::endl;
@@ -28,18 +45,24 @@ void LuaEngine::CallOnFrameCallbacks() {
   }
 }
 
-void LuaEngine::ProcessChildWidget(sol::table widget, const std::string& window) {
-  sol::optional<std::string> type = widget["__type"];
-  if (!type) {
-    std::cerr << "Widget has no type" << std::endl;
-    return;
-  } 
+void LuaEngine::ProcessTopLevelWidgets() {
+  for (auto& kv : lua_registry) {
+    sol::object key = kv.first;
+    sol::object val = kv.second;
 
-  std::string widgetType = type.value();
+    if (val.get_type() == sol::type::table) {
+      sol::table table = val.as<sol::table>();
 
-  if (widgetType == "Button") {
-    sol::optional<sol::function> on_frame = widget["on_frame"];
-    RegisterButton(window, widget.get_or("name", std::string("")), widget.get_or("text", std::string("")),  on_frame.value_or(sol::nil));
+      sol::optional<std::string> widget_type = table["__widget_type"];
+      if (!widget_type) 
+        continue;
+
+      std::string type = widget_type.value();
+
+      if (type == "window") {
+        RegisterWindow(table);
+      } 
+    }
   }
 }
 
@@ -77,25 +100,11 @@ void LuaEngine::RegisterBindings() {
     "in_out_cubic", WidgetEngine::AnimCurve::InOutCubic
   );
 
-  lua["WindowInfoCpp"] = lua.new_usertype<WidgetEngine::WindowInfo>("WindowInfo",
-    sol::constructors<WidgetEngine::WindowInfo()>(),
-    "name", &WidgetEngine::WindowInfo::name,
-    "screen", &WidgetEngine::WindowInfo::screen,
-    "scope", &WidgetEngine::WindowInfo::scope,
-    "width", &WidgetEngine::WindowInfo::width,
-    "height", &WidgetEngine::WindowInfo::height,
-    "order", &WidgetEngine::WindowInfo::order,
-    "anchorArea", &WidgetEngine::WindowInfo::anchorArea,
-    "paddingOuter", &WidgetEngine::WindowInfo::paddingOuter,
-    "paddingInner", &WidgetEngine::WindowInfo::paddingInner,
-    "anchorZone", &WidgetEngine::WindowInfo::anchorZone,
-    "layout", &WidgetEngine::WindowInfo::layout
-  );
-
-  lua["WindowHandle"] = lua.new_usertype<WidgetEngine::WindowHandle>("WindowHandle",
-    "window", &WidgetEngine::WindowHandle::window ,
-    "frame", &WidgetEngine::WindowHandle::frame,
-    "layout", &WidgetEngine::WindowHandle::layout
+  lua["mouse_button"] = lua.create_table_with(
+    "none", Qt::NoButton,
+    "left", Qt::LeftButton,
+    "right", Qt::RightButton,
+    "middle", Qt::MiddleButton
   );
 
   lua["monitor"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
@@ -105,47 +114,8 @@ void LuaEngine::RegisterBindings() {
     "index", &WidgetEngine::MonitorInfo::index
   );
 
-  lua.set_function("ButtonCpp", [this](sol::table args) {
-    sol::optional<sol::function> on_frame = args["on_frame"];
-    RegisterButton(args.get_or("window", std::string("")), args.get_or("name", std::string("")), args.get_or("text", std::string("")), on_frame.value_or(sol::nil));
-  });
-
-  lua.set_function("Window", [this](sol::table args) {
-    WidgetEngine::WindowInfo info;
-
-    info.name = args.get_or("name", std::string(""));
-    info.screen = args.get_or("screen", 0);
-    info.width = args.get_or("width", 800);
-    info.height = args.get_or("height", 600);
-    info.scope = args.get_or("scope", std::string(""));
-    info.order = args.get_or("order", WidgetEngine::StackingOrder::None);
-    info.anchorArea = args.get_or("anchor_area", 0);
-    info.paddingOuter = args.get_or("padding_outer", 0);
-    info.paddingInner = args.get_or("padding_inner", 0);
-    info.anchorZone = args.get_or("anchor_zone", WidgetEngine::AnchorZone::None);
-    info.layout = args.get_or("layout", WidgetEngine::WindowLayout::None);
-
-    sol::optional<sol::function> on_frame = args["on_frame"];
-    RegisterWindow(info, on_frame.value_or(sol::nil));
-
-    bool visible = args.get_or("visible", true);
-    if (visible) {
-      engine.ShowWindow(info.name);
-    }
-
-    for (auto& kv : args) {
-      sol::object k = kv.first;
-      sol::object v = kv.second;
-
-      if (v.get_type() == sol::type::table) {
-        sol::table child = v.as<sol::table>();
-
-        sol::optional<std::string> type = child["__type"];
-        if (type) {
-          ProcessChildWidget(child, info.name);
-        }
-      }
-    }
+  lua.set_function("__process_widgets", [this]() {
+    ProcessTopLevelWidgets();
   });
 }
 
@@ -163,22 +133,27 @@ LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
     sol::lib::utf8
   );
 
+  lua_registry = lua.create_table();
+  lua["__widget_list"] = lua_registry;
+
   lua.script(R"(
     local home = os.getenv("HOME")
     package.path = package.path .. home .. "/.luarocks/share/lua/5.4/?.lua;" .. home .. "/.luarocks/share/lua/5.4/?/init.lua;" .. home .. "/luarocks/share/lua/5.4/?.lua;" .. home .. "/Desktop/Projects/blackboard/src/scripts/?.lua;"
     package.cpath = package.cpath .. home .. "/.luarocks/lib/lua/5.4/?.so;" .. home .. "/.luarocks/lib/lua/5.4/?.so;"
   )");
 
+  RegisterBindings();
+
   lua.script(R"(
-    function Button (args)
+    function Window (args)
       args = args or {}
-      args.__type = "Button"
+      args.__widget_type = "window"
+      args.id = args.id or ("window_" .. tostring(#__widget_list + 1))
+      table.insert(__widget_list, args)
 
       return args
     end
   )");
-
-  RegisterBindings();
 
   std::string scriptPath = std::string(getenv("HOME")) + "/.config/blackboard";
 
@@ -191,6 +166,8 @@ LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
       }
     }
   }
+
+  lua.script("__process_widgets()");
 
   frameTimer = new QTimer(nullptr);
   QObject::connect(frameTimer, &QTimer::timeout, frameTimer, [this]() {

@@ -1,10 +1,12 @@
 #include <LayerShellQt/Shell>
 #include <LayerShellQt/Window>
 
+#include <qnamespace.h>
 #include <QPropertyAnimation>
 #include <QEasingCurve>
 #include <QApplication>
 #include <QPushButton>
+#include <QMouseEvent>
 #include <QWidget>
 #include <QWindow>
 #include <QLayout>
@@ -13,9 +15,49 @@
 #include <QLabel>
 #include <QTimer>
 
+#include <qtmetamacros.h>
 #include <unordered_map>
 #include <iostream>
 #include <string>
+
+/**
+ * @class Button
+ * @brief button struct
+ *
+ */
+class Button : public QPushButton {
+    Q_OBJECT
+  public:
+    using QPushButton::QPushButton;
+
+    ~Button();
+    Button(QWidget* parent = nullptr);
+
+  signals:
+    void Clicked(Qt::MouseButton btn);
+    void HoverEnter();
+    void HoverLeave();
+
+  protected:
+    void mousePressEvent(QMouseEvent* e) override {
+      QPushButton::mousePressEvent(e);
+      emit Clicked(e->button());
+    }
+
+    bool event(QEvent* e) override {
+      switch (e->type()) {
+        case QEvent::HoverEnter:
+          emit HoverEnter();
+          break;
+        case QEvent::HoverLeave:
+          emit HoverLeave();
+          break;
+        default:
+          break;
+      }
+      return QPushButton::event(e);
+    }
+};
 
 /**
  * @class WidgetEngine
@@ -105,15 +147,6 @@ class WidgetEngine {
       std::string name;
     };
 
-    /**
-     * @class Button
-     * @brief button struct
-     *
-     */
-    struct Button : public Widget {
-      QPushButton* button = nullptr;
-      std::string text;
-    };
 
     struct Label : public Widget {
       QLabel* label = nullptr;
@@ -216,7 +249,7 @@ class WidgetEngine {
      * @param text 
      * @param alignment 
      */
-    void AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment);
+    void AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, std::function<void(Qt::MouseButton)> onClick, std::function<void()> hoverEnter, std::function<void()> hoverLeave);
 
     /**
      * @brief resizes a widget

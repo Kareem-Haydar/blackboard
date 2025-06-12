@@ -1,5 +1,11 @@
 #include <headers/WidgetEngine.h>
 
+Button::Button(QWidget* parent) : QPushButton(parent) {
+  setAttribute(Qt::WA_Hover);
+}
+
+Button::~Button() {}
+
 WidgetEngine::WidgetEngine(int argc, char** argv) : app(argc, argv) {
   LayerShellQt::Shell::useLayerShell();
 }
@@ -136,16 +142,41 @@ void WidgetEngine::ResizeWindow(const std::string& name, unsigned int width, uns
   }
 }
 
-void WidgetEngine::AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment) {
+void WidgetEngine::AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, std::function<void(Qt::MouseButton)> onClick, std::function<void()> hoverEnter, std::function<void()> hoverLeave) {
   WidgetEngine::WindowHandle* handle = GetWindow(window);
   if (handle && handle->window && handle->window->isWindow()) {
-    QPushButton* button = new QPushButton(handle->window);
-    button->show();
-    button->setObjectName(QString::fromStdString(name));
-    button->setText(QString::fromStdString(text));
+    Button* btn = new Button(handle->window);
+    btn->show();
+    btn->setObjectName(name);
+    btn->setText(QString::fromStdString(text));
     if (handle->layout) {
-      handle->layout->addWidget(button);
-    } 
+      handle->layout->addWidget(btn);
+    }
+
+    if (onClick) {
+      QObject::connect(btn, &Button::Clicked, [onClick] (Qt::MouseButton button) {
+        onClick(button);
+      });
+    }
+
+    if (hoverEnter) {
+      QObject::connect(btn, &Button::HoverEnter, [hoverEnter] () {
+        hoverEnter();
+      });
+    }
+
+    if (hoverLeave) {
+      QObject::connect(btn, &Button::HoverLeave, [hoverLeave] () {
+        hoverLeave();
+      });
+    }
+    //QPushButton* button = new QPushButton(handle->window);
+    //button->show();
+    //button->setObjectName(QString::fromStdString(name));
+    //button->setText(QString::fromStdString(text));
+    //if (handle->layout) {
+    //  handle->layout->addWidget(button);
+    //} 
   }
 }
 
