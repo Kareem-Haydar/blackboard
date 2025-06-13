@@ -1,5 +1,39 @@
 #include <headers/LuaEngine.h>
 
+void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent) {
+  sol::optional<sol::table> mt_exists = widget[sol::metatable_key];
+  if (!mt_exists) {
+    sol::table mt = lua.create_table();
+
+    mt.set_function("__newindex", [this, id, type, parent] (sol::table table, sol::object key, sol::object val) {
+      if (key.is<std::string>()) {
+        if (val.is<std::string>()) {
+          std::string k = key.as<std::string>();
+          std::string v = val.as<std::string>();
+
+          if (k == "stylesheet") {
+            if (type == "window") {
+              engine.SetWindowStyleSheet(id, v);
+            }
+            if (type == "button") {
+              if (parent == "") {
+                std::cerr << "widgets other than windows must have a parent\n";
+                return;
+              }
+
+              engine.SetWidgetStyleSheet(parent, id, v);
+            }
+          }
+        }
+      }
+
+      table.raw_set(key, val);
+    });
+
+    widget[sol::metatable_key] = mt;
+  }
+}
+
 void LuaEngine::RegisterWindow(sol::table args) {
   WidgetEngine::WindowInfo info;
 
@@ -14,30 +48,122 @@ void LuaEngine::RegisterWindow(sol::table args) {
   info.anchorArea = args.get_or("anchor_area", 0);
   info.paddingOuter = args.get_or("padding_outer", 0);
   info.paddingInner = args.get_or("padding_inner", 0);
-  info.anchorZone = args.get_or("anchor_zone", WidgetEngine::AnchorZone::None);
+  info.anchorZone = args.get_or("anchors", WidgetEngine::AnchorZone::None);
   info.layout = args.get_or("layout", WidgetEngine::WindowLayout::None);
 
   engine.AddWindow(info);
   engine.ShowWindow(info.name);
 
   sol::optional<sol::function> on_frame = args["on_frame"];
-  if (on_frame) {
-    if (on_frame.value().valid()) {
-      on_frame_callbacks.insert(std::make_pair(id, on_frame.value()));
+  if (on_frame && on_frame.value().valid()) {
+    on_frame_callbacks[id] = on_frame.value();
+  }
+
+  sol::optional<sol::function> on_signal = args["on_signal"];
+  if (on_signal && on_signal.value().valid()) {
+    signal_listeners.push_back(on_signal.value());
+  }
+
+  widget_registry[id] = args;
+}
+
+void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
+  std::string id = args.get_or("id", std::string(""));
+  std::string text = args.get_or("text", std::string("Button"));
+
+  sol::optional<sol::function> on_frame = args["on_frame"];
+  sol::optional<sol::function> on_signal = args["on_signal"];
+  sol::optional<sol::function> on_click = args["on_click"];
+  sol::optional<sol::function> hover_enter = args["hover_enter"];
+  sol::optional<sol::function> hover_leave = args["hover_leave"];
+
+  std::function<void(Qt::MouseButton)> fn_on_click = [this, id, on_click, parent] (Qt::MouseButton btn) {
+    if (on_click) {
+      sol::function cb = on_click.value();
+      if (cb.valid()) {
+        auto it = widget_registry.find(id);
+        if (it != widget_registry.end()) {
+          sol::table self = it->second;
+          SetWidgetMetatable(self, self["id"], self["__widget_type"], parent);
+          current_emitter_id = id;
+          cb(self, static_cast<int>(btn));
+          current_emitter_id = "";
+        }
+      }
+    }
+  };
+
+  std::function<void()> fn_hover_enter = [this, id, hover_enter, parent] () {
+    if (hover_enter) {
+      sol::function cb = hover_enter.value();
+      if (cb.valid()) {
+        auto it = widget_registry.find(id);
+        if (it != widget_registry.end()) {
+          sol::table self = it->second;
+          SetWidgetMetatable(self, self["id"], self["__widget_type"], parent);
+          current_emitter_id = id;
+          cb(self);
+          current_emitter_id = "";
+        }
+      }
+    }
+  };
+
+  std::function<void()> fn_hover_leave = [this, id, hover_leave, parent] () {
+    if (hover_leave) {
+      sol::function cb = hover_leave.value();
+      if (cb.valid()) {
+        auto it = widget_registry.find(id);
+        if (it != widget_registry.end()) {
+          sol::table self = it->second;
+          SetWidgetMetatable(self, self["id"], self["__widget_type"], parent);
+          current_emitter_id = id;
+          cb(self);
+          current_emitter_id = "";
+        }
+      }
+    }
+  };
+
+  engine.AddButton(parent, id, text, WidgetEngine::WidgetAlignment::AlignmentNone, fn_on_click, fn_hover_enter, fn_hover_leave);
+
+  widget_registry[id] = args;
+
+  if (on_click) {
+    sol::function cb = on_frame.value();
+    if (cb.valid()) {
+      on_frame_callbacks[id] = cb;
     }
   }
 
-  widget_registry.insert(std::make_pair(id, args));
+  if (on_signal) {
+    sol::function cb = on_signal.value();
+    if (cb.valid()) {
+      signal_listeners.push_back(cb);
+    }
+  }
+
+  args["parent"] = parent;
 }
 
 void LuaEngine::CallOnFrameCallbacks() {
   auto it = on_frame_callbacks.begin();
   while (it != on_frame_callbacks.end()) {
-    sol::table self = widget_registry.find(it->first)->second;
+    const std::string& window_id = it->first;
+    
+    auto registry_it = widget_registry.find(window_id);
+    if (registry_it == widget_registry.end()) {
+      ++it;
+      continue;
+    }
+    
+    sol::table self = registry_it->second;
+
+    SetWidgetMetatable(self, self["id"], self["__widget_type"], "");
+    
     sol::protected_function_result result = it->second(self);
     if (!result.valid()) {
       sol::error err = result;
-      std::cerr << "Lua error: " << err.what() << std::endl;
       it = on_frame_callbacks.erase(it);  
     } else {
       ++it;
@@ -58,10 +184,28 @@ void LuaEngine::ProcessTopLevelWidgets() {
         continue;
 
       std::string type = widget_type.value();
+      std::string id = table["id"];
 
       if (type == "window") {
         RegisterWindow(table);
+        table["parent"] = "";
+        ProcessChildWidgets(table, id);
       } 
+    }
+  }
+}
+
+void LuaEngine::ProcessChildWidgets(sol::table widget, const std::string& parent) {
+  for (auto& kv : widget) {
+    sol::object key = kv.first;
+    sol::object val = kv.second;
+
+    if (val.get_type() == sol::type::table) {
+      sol::table t = val.as<sol::table>();
+      sol::optional<std::string> type = t["__widget_type"];
+      if (type && type.value() == "button") {
+        RegisterButton(parent, t);
+      }
     }
   }
 }
@@ -117,6 +261,25 @@ void LuaEngine::RegisterBindings() {
   lua.set_function("__process_widgets", [this]() {
     ProcessTopLevelWidgets();
   });
+
+  lua.set_function("emit", [this](const std::string& signal) {
+    if (current_emitter_id == "") {
+      std::cerr << "emit must be called from a widget\n";
+      return;
+    }
+
+    sol::table widget = widget_registry.find(current_emitter_id)->second;
+    std::string type = widget["__widget_type"];
+
+    userdata data = { widget["id"], type };
+    lua_signals[signal] = data;
+    for (const auto& cb : signal_listeners) {
+      sol::optional<std::string> parent = widget["parent"];
+      std::cout << "widget type: " << type << " widget parent: " << parent.value_or("no parent") << std::endl;
+      SetWidgetMetatable(widget, widget["id"], type, parent.value());
+      cb(widget, signal);
+    }
+  });
 }
 
 LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
@@ -149,6 +312,15 @@ LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
       args = args or {}
       args.__widget_type = "window"
       args.id = args.id or ("window_" .. tostring(#__widget_list + 1))
+      table.insert(__widget_list, args)
+
+      return args
+    end
+
+    function Button (args)
+      args = args or {}
+      args.__widget_type = "button"
+      args.id = args.id or ("button_" .. tostring(#__widget_list + 1))
       table.insert(__widget_list, args)
 
       return args

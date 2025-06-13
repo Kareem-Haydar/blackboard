@@ -1,25 +1,37 @@
 #include <sol/sol.hpp>
+#include <sol/forward.hpp>
 #include <filesystem>
 #include <headers/WidgetEngine.h>
 
 class LuaEngine {
   private:
+    struct userdata {
+      std::string id;
+      std::string type;
+    };
+
+    std::string current_emitter_id = "";
+
     WidgetEngine engine;
     sol::state lua;
     std::unordered_map<std::string, sol::table> widget_registry;
     sol::table lua_registry;
+
+    std::vector<sol::function> signal_listeners;
+    std::unordered_map<std::string, LuaEngine::userdata> lua_signals;
     std::unordered_map<std::string, sol::function> on_frame_callbacks;
     QTimer* frameTimer;
 
     void RegisterBindings();
     void CallOnFrameCallbacks();
 
-    void ProcessTopLevelWidgets();
+    void SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent);
 
-    void ProcessChildWidget(sol::table widget, const std::string& window);
+    void ProcessTopLevelWidgets();
+    void ProcessChildWidgets(sol::table widget, const std::string& parent);
 
     void RegisterWindow(sol::table args);
-    void RegisterButton(const std::string& window, const std::string& name, const std::string& text, sol::function on_frame, sol::function on_click, sol::function hover_enter, sol::function hover_leave);
+    void RegisterButton(const std::string& parent, sol::table args);
 
   public:
     LuaEngine(int argc, char** argv);
