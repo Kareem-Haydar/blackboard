@@ -193,6 +193,17 @@ void WidgetEngine::AddLabel(const std::string& window, const std::string& name, 
   }
 }
 
+std::array<int, 2> WidgetEngine::GetWidgetSize(const std::string& window, const std::string& name) {
+  if (auto* handle = GetWindow(window)) {
+    if (handle->window && handle->window->isWindow()) {
+      if (auto* widget = handle->window->findChild<QWidget*>(QString::fromStdString(name))) {
+        return {widget->width(), widget->height()};
+      }
+    }
+  }
+  return {-1, -1};
+}
+
 void WidgetEngine::ResizeWidget(const std::string& window, const std::string& name, unsigned int width, unsigned int height) {
   if (auto* handle = GetWindow(window)) {
     if (handle->window && handle->window->isWindow()) {

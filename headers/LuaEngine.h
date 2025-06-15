@@ -31,6 +31,7 @@ class LuaEngine {
     void ProcessChildWidgets(sol::table widget, const std::string& parent);
 
     void RegisterWindow(sol::table args);
+    void RegisterLabel(const std::string& parent, sol::table args);
     void RegisterButton(const std::string& parent, sol::table args);
 
   public:

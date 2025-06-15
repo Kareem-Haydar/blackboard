@@ -7,22 +7,46 @@ void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, con
 
     mt.set_function("__newindex", [this, id, type, parent] (sol::table table, sol::object key, sol::object val) {
       if (key.is<std::string>()) {
+        std::string k = key.as<std::string>();
+
         if (val.is<std::string>()) {
-          std::string k = key.as<std::string>();
           std::string v = val.as<std::string>();
+
+          if (type != "window" && parent == "") {
+            std::cerr << "widgets other than windows must have a parent\n";
+            return true;
+          }
 
           if (k == "stylesheet") {
             if (type == "window") {
               engine.SetWindowStyleSheet(id, v);
-            }
-
-            if (type == "button") {
-              if (parent == "") {
-                std::cerr << "widgets other than windows must have a parent\n";
-                return true;
-              }
-
+            } else {
               engine.SetWidgetStyleSheet(parent, id, v);
+            }
+          } 
+        } else if (val.is<int>()) {
+          int v = val.as<int>();
+
+          if (type != "window" && parent == "") {
+            std::cerr << "widgets other than windows must have a parent\n";
+            return true;
+          }
+
+          if (k == "width") {
+            if (type == "window") {
+              std::array<int, 2> size = engine.GetWindowSize(id);
+              engine.ResizeWindow(id, v, size[1]);
+            } else {
+              std::array<int, 2> size = engine.GetWidgetSize(parent, id);
+              engine.ResizeWidget(parent, id, v, size[1]);
+            }
+          } else if (k == "height") {
+            if (type == "window") {
+              std::array<int, 2> size = engine.GetWindowSize(id);
+              engine.ResizeWindow(id, size[0], v);
+            } else {
+              std::array<int, 2> size = engine.GetWidgetSize(parent, id);
+              engine.ResizeWidget(parent, id, size[0], v);
             }
           }
         }
@@ -166,6 +190,37 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
   }
 }
 
+void LuaEngine::RegisterLabel(const std::string& parent, sol::table args) {
+  std::string id = args.get_or("id", std::string(""));
+  std::string text = args.get_or("text", std::string("Label"));
+
+  sol::optional<sol::function> on_frame = args["on_frame"];
+  sol::optional<sol::function> on_signal = args["on_signal"];
+
+  sol::optional<std::string> widget_type = args["__widget_type"];
+  if (!widget_type) {
+    args.raw_set("__widget_type", "label");
+  }
+
+  engine.AddLabel(parent, id, text, WidgetEngine::WidgetAlignment::AlignmentNone);
+
+  widget_registry[id] = args;
+
+  if (on_frame) {
+    sol::function cb = on_frame.value();
+    if (cb.valid()) {
+      on_frame_callbacks[id] = cb;
+    }
+  }
+
+  if (on_signal) {
+    sol::function cb = on_signal.value();
+    if (cb.valid()) {
+      signal_listeners[id] = cb;
+    }
+  }
+}
+
 void LuaEngine::CallOnFrameCallbacks() {
   auto it = on_frame_callbacks.begin();
   while (it != on_frame_callbacks.end()) {
@@ -222,8 +277,13 @@ void LuaEngine::ProcessChildWidgets(sol::table widget, const std::string& parent
     if (val.get_type() == sol::type::table) {
       sol::table t = val.as<sol::table>();
       sol::optional<std::string> type = t["__widget_type"];
+
       if (type && type.value() == "button") {
         RegisterButton(parent, t);
+      }
+
+      if (type && type.value() == "label") {
+        RegisterLabel(parent, t);
       }
     }
   }
@@ -346,6 +406,15 @@ LuaEngine::LuaEngine(int argc, char** argv) : engine(argc, argv) {
       args = args or {}
       args.__widget_type = "button"
       args.id = args.id or ("button_" .. tostring(#__widget_list + 1))
+      table.insert(__widget_list, args)
+
+      return args
+    end
+
+    function Label (args)
+      args = args or {}
+      args.__widget_type = "label"
+      args.id = args.id or ("label_" .. tostring(#__widget_list + 1))
       table.insert(__widget_list, args)
 
       return args
