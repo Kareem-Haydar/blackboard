@@ -25,7 +25,7 @@ class LuaEngine {
     void RegisterBindings();
     void CallOnFrameCallbacks();
 
-    void SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent);
+    void SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent, bool overwrite = false);
 
     void ProcessTopLevelWidgets();
     void ProcessChildWidgets(sol::table widget, const std::string& parent);

@@ -1,10 +1,9 @@
 #include <headers/LuaEngine.h>
 
-void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent) {
+void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent, bool overwrite) {
   sol::optional<sol::table> mt_exists = widget[sol::metatable_key];
-  if (!mt_exists) {
+  if (!mt_exists || overwrite) {
     sol::table mt = lua.create_table();
-
     mt.set_function("__newindex", [this, id, type, parent] (sol::table table, sol::object key, sol::object val) {
       if (key.is<std::string>()) {
         std::string k = key.as<std::string>();
@@ -101,6 +100,7 @@ void LuaEngine::RegisterWindow(sol::table args) {
   }
 
   widget_registry[id] = args;
+  SetWidgetMetatable(args, id, "window", "", true);
 }
 
 void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
@@ -130,7 +130,8 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
         auto it = widget_registry.find(id);
         if (it != widget_registry.end()) {
           sol::table self = it->second;
-          SetWidgetMetatable(self, self["id"], self["__widget_type"], parent);
+          std::string type = self["__widget_type"];
+          SetWidgetMetatable(self, id, type, parent);
           current_emitter_id = id;
           cb(self, static_cast<int>(btn));
           current_emitter_id = "";
@@ -146,7 +147,7 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
         auto it = widget_registry.find(id);
         if (it != widget_registry.end()) {
           sol::table self = it->second;
-          SetWidgetMetatable(self, self["id"], self["__widget_type"], parent);
+          SetWidgetMetatable(self, id, self["__widget_type"], parent);
           current_emitter_id = id;
           cb(self);
           current_emitter_id = "";
@@ -162,7 +163,7 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
         auto it = widget_registry.find(id);
         if (it != widget_registry.end()) {
           sol::table self = it->second;
-          SetWidgetMetatable(self, self["id"], self["__widget_type"], parent);
+          SetWidgetMetatable(self, id, self["__widget_type"], parent);
           current_emitter_id = id;
           cb(self);
           current_emitter_id = "";
@@ -188,6 +189,8 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
       signal_listeners[id] = cb;
     }
   }
+
+  SetWidgetMetatable(args, id, "button", parent, true);
 }
 
 void LuaEngine::RegisterLabel(const std::string& parent, sol::table args) {
