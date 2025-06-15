@@ -17,7 +17,7 @@ class LuaEngine {
     std::unordered_map<std::string, sol::table> widget_registry;
     sol::table lua_registry;
 
-    std::vector<sol::function> signal_listeners;
+    std::unordered_map<std::string, sol::function> signal_listeners;
     std::unordered_map<std::string, LuaEngine::userdata> lua_signals;
     std::unordered_map<std::string, sol::function> on_frame_callbacks;
     QTimer* frameTimer;
