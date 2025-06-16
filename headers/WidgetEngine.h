@@ -155,8 +155,8 @@ class WidgetEngine {
     void ShowWindow(const std::string& name);
     void HideWindow(const std::string& name);
 
-    void AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment);
-    void AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, std::function<void(Qt::MouseButton)> onClick, std::function<void()> hoverEnter, std::function<void()> hoverLeave);
+    void AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, bool homogeneous = true);
+    void AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, std::function<void(Qt::MouseButton)> onClick, std::function<void()> hoverEnter, std::function<void()> hoverLeave, bool homogeneous = true);
 
     std::array<int, 2> GetWidgetSize(const std::string& window, const std::string& name);
     void ResizeWidget(const std::string& window, const std::string& name, unsigned int width, unsigned int height);
@@ -165,6 +165,9 @@ class WidgetEngine {
     void SetWidgetStyleSheet(const std::string& window, const std::string& name, const std::string& styleSheet);
     void SetWindowStyleSheet(const std::string& window, const std::string& styleSheet);
 
+    void AnimateWidgetGeometryOnce(const std::string& window, const std::string& name, QRect start, QRect end, unsigned int duration, AnimCurve curve);
+    void AnimateWidgetMaxSizeOnce(const std::string& window, const std::string& name, QSize start, QSize end, unsigned int duration, AnimCurve curve);
+    void AnimateWidgetMinSizeOnce(const std::string& window, const std::string& name, QSize start, QSize end, unsigned int duration, AnimCurve curve);
     void AddAnimation(const std::string& name, const std::string& window, const std::string& widget, const std::string& property, unsigned int duration, int curve);
     void StartAnimation(const std::string& animation);
     void StopAnimation(const std::string& animation);

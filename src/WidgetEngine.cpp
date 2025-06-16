@@ -142,7 +142,7 @@ void WidgetEngine::ResizeWindow(const std::string& name, unsigned int width, uns
   }
 }
 
-void WidgetEngine::AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, std::function<void(Qt::MouseButton)> onClick, std::function<void()> hoverEnter, std::function<void()> hoverLeave) {
+void WidgetEngine::AddButton(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, std::function<void(Qt::MouseButton)> onClick, std::function<void()> hoverEnter, std::function<void()> hoverLeave, bool homogeneous) {
   WidgetEngine::WindowHandle* handle = GetWindow(window);
   if (handle && handle->window && handle->window->isWindow()) {
     Button* btn = new Button(handle->window);
@@ -150,6 +150,7 @@ void WidgetEngine::AddButton(const std::string& window, const std::string& name,
     btn->setObjectName(name);
     btn->setText(QString::fromStdString(text));
     if (handle->layout) {
+      //btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
       handle->layout->addWidget(btn);
     }
 
@@ -180,7 +181,7 @@ void WidgetEngine::AddButton(const std::string& window, const std::string& name,
   }
 }
 
-void WidgetEngine::AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment) {
+void WidgetEngine::AddLabel(const std::string& window, const std::string& name, const std::string& text, const WidgetAlignment& alignment, bool homogeneous) {
   WidgetEngine::WindowHandle* handle = GetWindow(window);
   if (handle && handle->window && handle->window->isWindow()) {
     QLabel* label = new QLabel(handle->window);
@@ -188,6 +189,7 @@ void WidgetEngine::AddLabel(const std::string& window, const std::string& name, 
     label->setObjectName(QString::fromStdString(name));
     label->setText(QString::fromStdString(text));
     if (handle->layout) {
+      label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
       handle->layout->addWidget(label);
     }
   }
@@ -238,6 +240,54 @@ void WidgetEngine::SetWindowStyleSheet(const std::string& window, const std::str
   if (auto* handle = GetWindow(window)) {
     if (handle->window && handle->window->isWindow()) {
       handle->window->setStyleSheet(QString::fromStdString(styleSheet));
+    }
+  }
+}
+
+void WidgetEngine::AnimateWidgetGeometryOnce(const std::string& window, const std::string& name, QRect start, QRect end, unsigned int duration, AnimCurve curve) {
+  WindowHandle* win = GetWindow(window);
+  if (win && win->window && win->window->isWindow()) {
+    if (auto* w = win->window->findChild<QWidget*>(QString::fromStdString(name))) {
+      w->setGeometry(start);
+      QPropertyAnimation* anim = new QPropertyAnimation(w, "geometry");
+      QObject::connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
+      anim->setDuration(duration);
+      anim->setEasingCurve(QEasingCurve::Type(curve));
+      anim->setStartValue(start);
+      anim->setEndValue(end);
+      anim->start();
+    }
+  }
+}
+
+void WidgetEngine::AnimateWidgetMaxSizeOnce(const std::string& window, const std::string& name, QSize start, QSize end, unsigned int duration, AnimCurve curve) {
+  WindowHandle* win = GetWindow(window);
+  if (win && win->window && win->window->isWindow()) {
+    if (auto* w = win->window->findChild<QWidget*>(QString::fromStdString(name))) {
+      w->setMaximumSize(start);
+      QPropertyAnimation* anim = new QPropertyAnimation(w, "maximumSize");
+      QObject::connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
+      anim->setDuration(duration);
+      anim->setEasingCurve(QEasingCurve::Type(curve));
+      anim->setStartValue(start);
+      anim->setEndValue(end);
+      anim->start();
+    }
+  }
+}
+
+void WidgetEngine::AnimateWidgetMinSizeOnce(const std::string& window, const std::string& name, QSize start, QSize end, unsigned int duration, AnimCurve curve) {
+  WindowHandle* win = GetWindow(window);
+  if (win && win->window && win->window->isWindow()) {
+    if (auto* w = win->window->findChild<QWidget*>(QString::fromStdString(name))) {
+      w->setMinimumSize(start);
+      QPropertyAnimation* anim = new QPropertyAnimation(w, "minimumSize");
+      QObject::connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
+      anim->setDuration(duration);
+      anim->setEasingCurve(QEasingCurve::Type(curve));
+      anim->setStartValue(start);
+      anim->setEndValue(end);
+      anim->start();
     }
   }
 }

@@ -1,21 +1,28 @@
 #include <headers/LuaEngine.h>
 
 void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent, bool overwrite) {
+  // check if the metatable exists already
   sol::optional<sol::table> mt_exists = widget[sol::metatable_key];
   if (!mt_exists || overwrite) {
     sol::table mt = lua.create_table();
+    
+    // set newindex method
     mt.set_function("__newindex", [this, id, type, parent] (sol::table table, sol::object key, sol::object val) {
+      // make sure key is a string
       if (key.is<std::string>()) {
         std::string k = key.as<std::string>();
 
+        // handle string values
         if (val.is<std::string>()) {
           std::string v = val.as<std::string>();
 
+          // make sure widget is valid
           if (type != "window" && parent == "") {
             std::cerr << "widgets other than windows must have a parent\n";
             return true;
           }
 
+          // handle stylesheet changes
           if (k == "stylesheet") {
             if (type == "window") {
               engine.SetWindowStyleSheet(id, v);
@@ -23,14 +30,17 @@ void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, con
               engine.SetWidgetStyleSheet(parent, id, v);
             }
           } 
+        // handle integer values
         } else if (val.is<int>()) {
           int v = val.as<int>();
 
+          // makme sure widget is valid
           if (type != "window" && parent == "") {
             std::cerr << "widgets other than windows must have a parent\n";
             return true;
           }
 
+          // handle geometry changes
           if (k == "width") {
             if (type == "window") {
               std::array<int, 2> size = engine.GetWindowSize(id);
@@ -54,12 +64,102 @@ void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, con
       return true;
     });
 
+    // set metatable if it doesn't exist
     widget[sol::metatable_key] = mt;
+  }
+}
 
+void LuaEngine::HandleStates(sol::table args, const std::string& parent) {
+  // make sure widget is valid
+  if (parent == "") {
+    std::string type = args["__widget_type"];
+    if (type != "window") {
+      std::cerr << "widgets other than windows must have a parent\n";
+      return;
+    }
+  }
+
+  // get state id
+  std::string id = args["id"];
+
+  // check if widget has animation states
+  sol::optional<sol::table> widget_states = args["states"];
+  if (widget_states && widget_states->valid()) {
+    // handle animation states
+    std::unordered_map<std::string, std::shared_ptr<State>> state_map;
+    sol::table tbl = widget_states.value();
+    for (auto& kv : tbl) {
+      sol::object key = kv.first;
+      sol::object val = kv.second;
+
+      if (val.is<sol::table>()) {
+        sol::table v = val.as<sol::table>();
+        sol::optional<std::string> property = v["property"];
+
+        // handle state property
+        if (property) {
+          // handle stylesheet property
+          if (property.value() == "stylesheet") {
+            // create and populate StylesheetState object
+            auto state = std::make_shared<StylesheetState>();
+            state->widget_id = id;
+            state->type = StateType::Stylesheet;
+
+            sol::optional<std::string> state_id = v["id"];
+            sol::optional<std::string> stylesheet = v["value"];
+
+            state->stylesheet = stylesheet.value_or("");
+
+            // add state to map
+            state_map[state_id.value_or("")] = state;
+          // handle geometry property
+          } else if (property.value() == "geometry") {
+            // create and populate RectState object
+            auto state = std::make_shared<RectState>();
+            state->widget_id = id;
+            state->type = StateType::Rect;
+
+            sol::optional<std::string> state_id = v["id"];
+            sol::optional<int> x = v["x"];
+            sol::optional<int> y = v["y"];
+            sol::optional<int> w = v["w"];
+            sol::optional<int> h = v["h"];
+
+            state->x = x.value_or(0);
+            state->y = y.value_or(0);
+            state->w = w.value_or(0);
+            state->h = h.value_or(0);
+
+            // add state to map
+            state_map[state_id.value_or("")] = std::move(state);
+          // handle size property
+          } else if (property.value() == "size") {
+            // create and populate SizeState object
+            auto state = std::make_shared<SizeState>();
+            state->widget_id = id;
+            state->type = StateType::Size;
+
+            sol::optional<std::string> state_id = v["id"];
+            sol::optional<int> w = v["w"];
+            sol::optional<int> h = v["h"];
+
+            state->w = w.value_or(0);
+            state->h = h.value_or(0);
+
+            // add state to map
+            state_map[state_id.value_or("")] = std::move(state);
+          }
+        }
+      }
+    }
+
+    // add states to global map
+    states[id] = state_map;
   }
 }
 
 void LuaEngine::RegisterWindow(sol::table args) {
+  // create and populate WindowInfo object
   WidgetEngine::WindowInfo info;
 
   std::string id = args.get_or("id", std::string(""));
@@ -76,19 +176,23 @@ void LuaEngine::RegisterWindow(sol::table args) {
   info.anchorZone = args.get_or("anchors", WidgetEngine::AnchorZone::None);
   info.layout = args.get_or("layout", WidgetEngine::WindowLayout::None);
 
+  // create and show window
   engine.AddWindow(info);
   engine.ShowWindow(info.name);
 
+  // handle on frame callback
   sol::optional<sol::function> on_frame = args["on_frame"];
   if (on_frame && on_frame.value().valid()) {
     on_frame_callbacks[id] = on_frame.value();
   }
 
+  // handle on signal callback
   sol::optional<sol::function> on_signal = args["on_signal"];
   if (on_signal && on_signal.value().valid()) {
     signal_listeners[id] = on_signal.value();
   }
 
+  // make sure required fields are set
   sol::optional<std::string> widget_type = args["__widget_type"];
   if (!widget_type) {
     args.raw_set("__widget_type", "window");
@@ -99,30 +203,34 @@ void LuaEngine::RegisterWindow(sol::table args) {
     args.raw_set("parent", "");
   }
 
-  widget_registry[id] = args;
+  HandleStates(args);
   SetWidgetMetatable(args, id, "window", "", true);
+
+  // add widget to global registry
+  widget_registry[id] = args;
 }
 
 void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
+  // get required fields
   std::string id = args.get_or("id", std::string(""));
   std::string text = args.get_or("text", std::string("Button"));
 
+  // get callbacks
   sol::optional<sol::function> on_frame = args["on_frame"];
   sol::optional<sol::function> on_signal = args["on_signal"];
   sol::optional<sol::function> on_click = args["on_click"];
   sol::optional<sol::function> hover_enter = args["hover_enter"];
   sol::optional<sol::function> hover_leave = args["hover_leave"];
 
+  // make sure required fields are set
   sol::optional<std::string> widget_type = args["__widget_type"];
   if (!widget_type) {
     args.raw_set("__widget_type", "window");
   }
 
-  sol::optional<std::string> parent_arg = args["parent"];
-  if (!parent_arg) {
-    args.raw_set("parent", "");
-  }
+  args.raw_set("parent", parent);
 
+  // on click C++ function object
   std::function<void(Qt::MouseButton)> fn_on_click = [this, id, on_click, parent] (Qt::MouseButton btn) {
     if (on_click) {
       sol::function cb = on_click.value();
@@ -132,14 +240,15 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
           sol::table self = it->second;
           std::string type = self["__widget_type"];
           SetWidgetMetatable(self, id, type, parent);
-          current_emitter_id = id;
+          caller_id = id;
           cb(self, static_cast<int>(btn));
-          current_emitter_id = "";
+          caller_id = "";
         }
       }
     }
   };
 
+  // hover enter C++ function object
   std::function<void()> fn_hover_enter = [this, id, hover_enter, parent] () {
     if (hover_enter) {
       sol::function cb = hover_enter.value();
@@ -148,14 +257,15 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
         if (it != widget_registry.end()) {
           sol::table self = it->second;
           SetWidgetMetatable(self, id, self["__widget_type"], parent);
-          current_emitter_id = id;
+          caller_id = id;
           cb(self);
-          current_emitter_id = "";
+          caller_id = "";
         }
       }
     }
   };
 
+  // hover leave C++ function object
   std::function<void()> fn_hover_leave = [this, id, hover_leave, parent] () {
     if (hover_leave) {
       sol::function cb = hover_leave.value();
@@ -164,9 +274,9 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
         if (it != widget_registry.end()) {
           sol::table self = it->second;
           SetWidgetMetatable(self, id, self["__widget_type"], parent);
-          current_emitter_id = id;
+          caller_id = id;
           cb(self);
-          current_emitter_id = "";
+          caller_id = "";
         }
       }
     }
@@ -174,8 +284,8 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
 
   engine.AddButton(parent, id, text, WidgetEngine::WidgetAlignment::AlignmentNone, fn_on_click, fn_hover_enter, fn_hover_leave);
 
-  widget_registry[id] = args;
 
+  // set callbacks if present
   if (on_frame) {
     sol::function cb = on_frame.value();
     if (cb.valid()) {
@@ -190,7 +300,11 @@ void LuaEngine::RegisterButton(const std::string& parent, sol::table args) {
     }
   }
 
+  HandleStates(args, parent);
   SetWidgetMetatable(args, id, "button", parent, true);
+
+  // add widget to global registry
+  widget_registry[id] = args;
 }
 
 void LuaEngine::RegisterLabel(const std::string& parent, sol::table args) {
@@ -222,6 +336,8 @@ void LuaEngine::RegisterLabel(const std::string& parent, sol::table args) {
       signal_listeners[id] = cb;
     }
   }
+
+  HandleStates(args, parent);
 }
 
 void LuaEngine::CallOnFrameCallbacks() {
@@ -333,6 +449,15 @@ void LuaEngine::RegisterBindings() {
     "middle", Qt::MiddleButton
   );
 
+  lua["easing"] = lua.create_table_with(
+    "in_quad", QEasingCurve::InQuad,
+    "out_quad", QEasingCurve::OutQuad,
+    "in_out_quad", QEasingCurve::InOutQuad,
+    "in_cubic", QEasingCurve::InCubic,
+    "out_cubic", QEasingCurve::OutCubic,
+    "in_out_cubic", QEasingCurve::InOutCubic
+  );
+
   lua["monitor"] = lua.new_usertype<WidgetEngine::MonitorInfo>("MonitorInfo",
     "width", &WidgetEngine::MonitorInfo::width,
     "height", &WidgetEngine::MonitorInfo::height,
@@ -344,13 +469,78 @@ void LuaEngine::RegisterBindings() {
     ProcessTopLevelWidgets();
   });
 
+  lua.set_function("animate_once", [this](sol::table args) {
+    if (caller_id == "") {
+      std::cerr << "animate_once must be called from a widget\n";
+      return;
+    }
+
+    sol::optional<std::string> start_state = args["start_state"];
+    sol::optional<std::string> end_state = args["end_state"];
+
+    auto widget_states = states.find(caller_id);
+    if (widget_states == states.end()) {
+      std::cerr << "no states in widget\n";
+      return;
+    }
+
+    auto start_it = widget_states->second.find(start_state.value());
+    auto end_it = widget_states->second.find(end_state.value());
+
+    if (start_it != widget_states->second.end() && end_it != widget_states->second.end()) {
+      if (start_it->second->type == StateType::Rect) {
+        auto start_rect = std::static_pointer_cast<RectState>(start_it->second);
+        auto end_rect = std::static_pointer_cast<RectState>(end_it->second);
+
+        QRect start = {
+          start_rect->x,
+          start_rect->y,
+          start_rect->w,
+          start_rect->h
+        };
+
+        QRect end = {
+          end_rect->x,
+          end_rect->y,
+          end_rect->w,
+          end_rect->h
+        };
+
+        sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
+        sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
+        sol::optional<int> duration = args["duration"];
+
+        engine.AnimateWidgetGeometryOnce(parent.value_or(""), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::InOutQuad));
+      } else if (start_it->second->type == StateType::Size) {
+        auto start_size = std::static_pointer_cast<SizeState>(start_it->second);
+        auto end_size = std::static_pointer_cast<SizeState>(end_it->second);
+
+        QSize start = {
+          start_size->w,
+          start_size->h
+        };
+
+        QSize end = {
+          end_size->w,
+          end_size->h
+        };
+
+        sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
+        sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
+        sol::optional<int> duration = args["duration"];
+
+        engine.AnimateWidgetMaxSizeOnce(parent.value_or(""), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::InOutQuad));
+      }
+    }
+  });
+
   lua.set_function("emit", [this](const std::string& signal) {
-    if (current_emitter_id == "") {
+    if (caller_id == "") {
       std::cerr << "emit must be called from a widget\n";
       return;
     }
 
-    sol::table widget = widget_registry.find(current_emitter_id)->second;
+    sol::table widget = widget_registry.find(caller_id)->second;
     std::string emitter_type = widget["__widget_type"];
 
     userdata data = { widget["id"], emitter_type };
