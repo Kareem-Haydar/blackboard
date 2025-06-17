@@ -1,4 +1,5 @@
 #include <headers/LuaEngine.h>
+#include <memory>
 
 void LuaEngine::SetWidgetMetatable(sol::table widget, const std::string& id, const std::string& type, const std::string& parent, bool overwrite) {
   // check if the metatable exists already
@@ -475,8 +476,20 @@ void LuaEngine::RegisterBindings() {
       return;
     }
 
+    sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
+
     sol::optional<std::string> start_state = args["start_state"];
     sol::optional<std::string> end_state = args["end_state"];
+
+    if (!start_state) {
+      std::cerr << "animate_once must have a start state\n";
+      return;
+    }
+
+    if (!end_state) {
+      std::cerr << "animate_once must have an end state\n";
+      return;
+    }
 
     auto widget_states = states.find(caller_id);
     if (widget_states == states.end()) {
@@ -484,55 +497,127 @@ void LuaEngine::RegisterBindings() {
       return;
     }
 
-    auto start_it = widget_states->second.find(start_state.value());
-    auto end_it = widget_states->second.find(end_state.value());
+    auto start_state_it = widget_states->second.find(start_state.value());
+    auto end_state_it = widget_states->second.find(end_state.value());
 
-    if (start_it != widget_states->second.end() && end_it != widget_states->second.end()) {
-      if (start_it->second->type == StateType::Rect) {
-        auto start_rect = std::static_pointer_cast<RectState>(start_it->second);
-        auto end_rect = std::static_pointer_cast<RectState>(end_it->second);
+    if (start_state.value() != "current_state" && start_state_it == widget_states->second.end()) {
+      std::cerr << "start state not found\n";
+      return;
+    }
 
-        QRect start = {
-          start_rect->x,
-          start_rect->y,
-          start_rect->w,
-          start_rect->h
+    if (end_state_it == widget_states->second.end()) {
+      std::cerr << "end state not found\n";
+      return;
+    }
+
+    if (end_state_it->second->type == StateType::Size) {
+      auto end_state = std::static_pointer_cast<SizeState>(end_state_it->second);
+
+      QSize end = {
+        end_state->w,
+        end_state->h
+      };
+
+      QSize start;
+
+      if (start_state.value() == "current_state") {
+        auto current_size = engine.GetWidgetSize(parent.value(), caller_id);
+
+        start = {
+          current_size[0],
+          current_size[1]
         };
+      } else {
+        auto start_state = std::static_pointer_cast<SizeState>(start_state_it->second);
 
-        QRect end = {
-          end_rect->x,
-          end_rect->y,
-          end_rect->w,
-          end_rect->h
+        start = {
+          start_state->w,
+          start_state->h
         };
-
-        sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
-        sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
-        sol::optional<int> duration = args["duration"];
-
-        engine.AnimateWidgetGeometryOnce(parent.value_or(""), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::InOutQuad));
-      } else if (start_it->second->type == StateType::Size) {
-        auto start_size = std::static_pointer_cast<SizeState>(start_it->second);
-        auto end_size = std::static_pointer_cast<SizeState>(end_it->second);
-
-        QSize start = {
-          start_size->w,
-          start_size->h
-        };
-
-        QSize end = {
-          end_size->w,
-          end_size->h
-        };
-
-        sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
-        sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
-        sol::optional<int> duration = args["duration"];
-
-        engine.AnimateWidgetMaxSizeOnce(parent.value_or(""), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::InOutQuad));
       }
+
+      if (start.width() <= 0 || start.height() <= 0) {
+        std::cerr << "invalid start size\n";
+        return;
+      }
+
+      if (end.width() <= 0 || end.height() <= 0) {
+        std::cerr << "invalid end size\n";
+        return;
+      }
+
+      sol::optional<int> duration = args["duration"];
+      sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
+
+      engine.AnimateWidgetMaxSizeOnce(parent.value(), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::OutQuad));
     }
   });
+
+//  lua.set_function("animate_once", [this](sol::table args) {
+//    if (caller_id == "") {
+//      std::cerr << "animate_once must be called from a widget\n";
+//      return;
+//    }
+//
+//    sol::optional<std::string> start_state = args["start_state"];
+//    sol::optional<std::string> end_state = args["end_state"];
+//
+//    auto widget_states = states.find(caller_id);
+//    if (widget_states == states.end()) {
+//      std::cerr << "no states in widget\n";
+//      return;
+//    }
+//
+//    auto start_it = widget_states->second.find(start_state.value());
+//    auto end_it = widget_states->second.find(end_state.value());
+//
+//    if (start_it != widget_states->second.end() && end_it != widget_states->second.end()) {
+//      if (start_it->second->type == StateType::Rect) {
+//        auto start_rect = std::static_pointer_cast<RectState>(start_it->second);
+//        auto end_rect = std::static_pointer_cast<RectState>(end_it->second);
+//
+//        QRect start = {
+//          start_rect->x,
+//          start_rect->y,
+//          start_rect->w,
+//          start_rect->h
+//        };
+//
+//        QRect end = {
+//          end_rect->x,
+//          end_rect->y,
+//          end_rect->w,
+//          end_rect->h
+//        };
+//
+//        sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
+//        sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
+//        sol::optional<int> duration = args["duration"];
+//
+//        engine.AnimateWidgetGeometryOnce(parent.value_or(""), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::InOutQuad));
+//      } else if (start_it->second->type == StateType::Size) {
+//        auto start_size = std::static_pointer_cast<SizeState>(start_it->second);
+//        auto end_size = std::static_pointer_cast<SizeState>(end_it->second);
+//
+//        QSize start = {
+//          start_size->w,
+//          start_size->h
+//        };
+//
+//        QSize end = {
+//          end_size->w,
+//          end_size->h
+//        };
+//
+//        sol::optional<std::string> parent = widget_registry[caller_id]["parent"];
+//        sol::optional<WidgetEngine::AnimCurve> curve = args["curve"];
+//        sol::optional<int> duration = args["duration"];
+//
+//        engine.AnimateWidgetMaxSizeOnce(parent.value_or(""), caller_id, start, end, duration.value_or(1000), curve.value_or(WidgetEngine::AnimCurve::InOutQuad));
+//      }
+//    }
+//  });
+
 
   lua.set_function("emit", [this](const std::string& signal) {
     if (caller_id == "") {

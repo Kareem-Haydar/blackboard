@@ -32,7 +32,7 @@ namespace sol { namespace stack {
 
 #if SOL_IS_ON(SOL_COMPILER_GCC)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+//#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
 	namespace stack_detail {
