@@ -9,6 +9,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+set(CMAKE_LINKER "lld")
+set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LUA REQUIRED lua)
 
@@ -43,13 +46,31 @@ if (BUILD_GREETER)
 else()
   set(SOURCES
     src/main.cpp
-    src/WidgetEngine.cpp
-    src/LuaEngine.cpp
+
+    src/BlackboardConfig.cpp
+
+    src/WidgetEngine/WidgetEngine.cpp
+
+    src/LuaEngine/LuaEngine.cpp
+    src/LuaEngine/Bindings.cpp
+    src/LuaEngine/Callbacks.cpp
+    src/LuaEngine/Hooks.cpp
+    src/LuaEngine/Metatables.cpp
+    src/LuaEngine/States.cpp
+    src/LuaEngine/Widgets.cpp
+    src/LuaEngine/Window.cpp
+    src/LuaEngine/Button.cpp
+    src/LuaEngine/Label.cpp
+    src/LuaEngine/LineEdit.cpp
   )
 
   set(HEADERS
-    headers/WidgetEngine.h
-    headers/LuaEngine.h
+    WidgetEngine/WidgetEngine.h
+    WidgetEngine/Structs.h
+    WidgetEngine/Widgets.h
+
+    LuaEngine/LuaEngine.h
+    LuaEngine/Structs.h
   )
 
   add_executable(blackboard ${SOURCES} ${HEADERS})
@@ -62,4 +83,17 @@ else()
 
   target_include_directories(blackboard PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LUA_INCLUDE_DIRS})
   target_link_libraries(blackboard PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets LayerShellQt::Interface Qt6::DBus Qt6::WaylandClient ${LUA_LIBRARIES})
+
+  target_precompile_headers(blackboard PRIVATE 
+    "WidgetEngine/WidgetEngine.h"
+    "WidgetEngine/Structs.h"
+    "WidgetEngine/Widgets.h"
+
+    "LuaEngine/LuaEngine.h"
+    "LuaEngine/Structs.h"
+
+    "sol/sol.hpp"
+
+    <QWidget>
+  )
 endif()
