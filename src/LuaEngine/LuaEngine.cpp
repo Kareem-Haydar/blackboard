@@ -122,11 +122,19 @@ namespace LuaEngine {
 
         return args
       end
+
+      function PropertyAnimation (args)
+        args = args or {}
+        args.__widget_type = "property_animation"
+
+        return args
+      end
     )");
 
     frameTimer = new QTimer(nullptr);
     QObject::connect(frameTimer, &QTimer::timeout, frameTimer, [this]() {
       CallOnFrameCallbacks();
+      HandleAnimations();
     });
   }
 

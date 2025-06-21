@@ -22,7 +22,6 @@ namespace LuaEngine {
     // create and populate WindowInfo object
     WidgetEngine::WindowInfo info;
 
-
     info.name = id;
     info.screen = args.get_or("screen", 0);
     info.width = args.get_or("width", 800);
@@ -67,6 +66,7 @@ namespace LuaEngine {
     if (hooks && hooks->valid()) {
       
     }
+
 
     // handle animation states
     HandleStates(args);

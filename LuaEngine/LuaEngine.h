@@ -34,6 +34,10 @@ namespace LuaEngine {
       std::unordered_map<std::string, sol::table> global_pre_hooks;
       std::unordered_map<std::string, sol::table> global_post_hooks;
 
+      std::unordered_map<std::string, std::unordered_map<std::string, std::shared_ptr<PropertyAnimation>>> widget_animations;
+
+      std::unordered_map<std::string, Widget> widgets;
+
       QTimer* frameTimer;
 
       void RegisterHooks(const std::string& widget_id, sol::table hooks);
@@ -52,12 +56,20 @@ namespace LuaEngine {
       void ProcessTopLevelWidgets();
       void ProcessChildWidgets(sol::table widget, const std::string& parent);
 
+      void ProcessAnimations(sol::table widget, const std::string& parent);
+
       void HandleStates(sol::table args, const std::string& parent = "");
 
       void RegisterWindow(sol::table args);
       void RegisterLabel(const std::string& parent, sol::table args);
       void RegisterButton(const std::string& parent, sol::table args);
       void RegisterLineEdit(const std::string& parent, sol::table args);
+
+      void RegisterAnimation(const std::string& parent, const std::string& widget_id, sol::table args);
+
+      void HandleAnimations();
+
+      void EmitSignal(const std::string& signal);
 
     public:
       Engine(int argc, char** argv);

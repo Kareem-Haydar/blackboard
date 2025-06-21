@@ -77,6 +77,7 @@ namespace WidgetEngine {
   struct LabelInfo {
     std::string name;
     std::string text;
+    WidgetAlignment allignment;
     bool elevated;
   };
 

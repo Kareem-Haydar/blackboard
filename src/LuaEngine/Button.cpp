@@ -122,6 +122,7 @@ namespace LuaEngine {
     }
 
     HandleStates(args, parent);
+    ProcessAnimations(args, parent);
     SetWidgetMetatable(args, id, "button", parent, true);
 
     // add widget to global registry

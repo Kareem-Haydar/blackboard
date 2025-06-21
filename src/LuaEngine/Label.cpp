@@ -13,9 +13,13 @@ namespace LuaEngine {
       args.raw_set("__widget_type", "label");
     }
 
-    engine.AddLabel(parent, id, text, WidgetEngine::WidgetAlignment::AlignmentNone, false);
+    WidgetEngine::LabelInfo info;
+    info.name = id;
+    info.text = text;
+    info.elevated = false;
+    info.allignment = WidgetEngine::WidgetAlignment::AlignmentNone;
 
-    widget_registry[id] = args;
+    engine.AddLabel(parent, info);
 
     if (on_frame) {
       sol::function cb = on_frame.value();
@@ -32,5 +36,8 @@ namespace LuaEngine {
     }
 
     HandleStates(args, parent);
+    ProcessAnimations(args, parent);
+
+    widget_registry[id] = args;
   }
 }

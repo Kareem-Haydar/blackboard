@@ -50,13 +50,19 @@ else()
     src/BlackboardConfig.cpp
 
     src/WidgetEngine/WidgetEngine.cpp
+    src/WidgetEngine/Monitors.cpp
+    src/WidgetEngine/Animations.cpp
+    src/WidgetEngine/Properties.cpp
+    src/WidgetEngine/Widgets.cpp
 
     src/LuaEngine/LuaEngine.cpp
+    src/LuaEngine/Animations.cpp
     src/LuaEngine/Bindings.cpp
     src/LuaEngine/Callbacks.cpp
     src/LuaEngine/Hooks.cpp
     src/LuaEngine/Metatables.cpp
     src/LuaEngine/States.cpp
+    src/LuaEngine/Signals.cpp
     src/LuaEngine/Widgets.cpp
     src/LuaEngine/Window.cpp
     src/LuaEngine/Button.cpp

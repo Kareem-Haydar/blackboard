@@ -52,6 +52,7 @@ namespace LuaEngine {
     engine.AddLineEdit(parent, id.value(), placeholder.value(), WidgetEngine::WidgetAlignment::AlignmentNone, fn_on_enter, false);
 
     HandleStates(args, parent);
+    ProcessAnimations(args, parent);
     SetWidgetMetatable(args, id.value(), "line_edit", parent, true);
 
     // add widget to global registry
