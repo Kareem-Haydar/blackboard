@@ -43,7 +43,11 @@ namespace LuaEngine {
             std::string type = self["__widget_type"];
             SetWidgetMetatable(self, id, type, parent);
             caller_id = id;
+            CallWidgetPreHooks("on_click");
+            CallAnimPreHooks("on_click");
             cb(self, static_cast<int>(btn));
+            CallAnimPostHooks("on_click");
+            CallWidgetPostHooks("on_click");
             caller_id = "";
           }
         }
@@ -65,7 +69,11 @@ namespace LuaEngine {
             sol::table self = it->second;
             SetWidgetMetatable(self, id, self["__widget_type"], parent);
             caller_id = id;
+            CallWidgetPreHooks("hover_enter");
+            CallAnimPreHooks("hover_enter");
             cb(self);
+            CallAnimPostHooks("hover_enter");
+            CallWidgetPostHooks("hover_enter");
             caller_id = "";
           }
         }
@@ -87,7 +95,11 @@ namespace LuaEngine {
             sol::table self = it->second;
             SetWidgetMetatable(self, id, self["__widget_type"], parent);
             caller_id = id;
+            CallWidgetPreHooks("hover_leave");
+            CallAnimPreHooks("hover_leave");
             cb(self);
+            CallAnimPostHooks("hover_leave");
+            CallWidgetPostHooks("hover_leave");
             caller_id = "";
           }
         }
@@ -105,27 +117,12 @@ namespace LuaEngine {
 
     engine.AddButton(parent, info);
 
-
-    // set callbacks if present
-    if (on_frame) {
-      sol::function cb = on_frame.value();
-      if (cb.valid()) {
-        on_frame_callbacks[id] = cb;
-      }
-    }
-
-    if (on_signal) {
-      sol::function cb = on_signal.value();
-      if (cb.valid()) {
-        signal_listeners[id] = cb;
-      }
-    }
-
     HandleStates(args, parent);
-    ProcessAnimations(args, parent);
     SetWidgetMetatable(args, id, "button", parent, true);
 
     // add widget to global registry
     widget_registry[id] = args;
+
+    ProcessAnimations(args, parent);
   }
 }

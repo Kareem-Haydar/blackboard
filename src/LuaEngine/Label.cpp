@@ -21,20 +21,6 @@ namespace LuaEngine {
 
     engine.AddLabel(parent, info);
 
-    if (on_frame) {
-      sol::function cb = on_frame.value();
-      if (cb.valid()) {
-        on_frame_callbacks[id] = cb;
-      }
-    }
-
-    if (on_signal) {
-      sol::function cb = on_signal.value();
-      if (cb.valid()) {
-        signal_listeners[id] = cb;
-      }
-    }
-
     HandleStates(args, parent);
     ProcessAnimations(args, parent);
 

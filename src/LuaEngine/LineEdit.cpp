@@ -28,26 +28,16 @@ namespace LuaEngine {
             sol::table self = it->second;
             SetWidgetMetatable(self, id.value(), self["__widget_type"], parent);
             caller_id = id.value();
+            CallWidgetPreHooks("on_enter");
+            CallAnimPreHooks("on_enter");
             cb(self, text);
+            CallAnimPostHooks("on_enter");
+            CallWidgetPostHooks("on_enter");
             caller_id = "";
           }
         }
       }
     };
-
-    if (on_frame) {
-      sol::function cb = on_frame.value();
-      if (cb.valid()) {
-        on_frame_callbacks[id.value()] = cb;
-      }
-    }
-
-    if (on_signal) {
-      sol::function cb = on_signal.value();
-      if (cb.valid()) {
-        signal_listeners[id.value()] = cb;
-      }
-    }
 
     engine.AddLineEdit(parent, id.value(), placeholder.value(), WidgetEngine::WidgetAlignment::AlignmentNone, fn_on_enter, false);
 

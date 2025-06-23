@@ -4,9 +4,9 @@ namespace LuaEngine {
   void Engine::RunFile(const std::string& file) {
     lua.script(R"(
       if __debug then
-        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")) .. " with debugging enabled")
+        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")) .. " with debugging enabled\n")
       else 
-        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")))
+        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")) .. "\n")
       end
     )");
 
@@ -23,9 +23,9 @@ namespace LuaEngine {
   void Engine::RunAllFiles() {
     lua.script(R"(
       if __debug then
-        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")) .. " with debugging enabled")
+        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")) .. " with debugging enabled\n")
       else 
-        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")))
+        print("starting blackboard version " .. __version .. " on " .. tostring(os.date("%Y-%m-%d %H:%M:%S")) .. "\n")
       end
     )");
 
@@ -42,6 +42,7 @@ namespace LuaEngine {
     }
 
     lua.script("__process_widgets()");
+    ProcessHooks();
 
     frameTimer->start(1000 / 120);
   }
@@ -134,7 +135,7 @@ namespace LuaEngine {
     frameTimer = new QTimer(nullptr);
     QObject::connect(frameTimer, &QTimer::timeout, frameTimer, [this]() {
       CallOnFrameCallbacks();
-      HandleAnimations();
+      ProcessSignals();
     });
   }
 

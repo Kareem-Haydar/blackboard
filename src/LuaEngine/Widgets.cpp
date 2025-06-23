@@ -15,6 +15,23 @@ namespace LuaEngine {
 
         std::string type = widget_type.value();
         std::string id = table["id"];
+        
+        sol::optional<sol::function> on_frame = table["on_frame"];
+        sol::optional<sol::function> on_signal = table["on_signal"];
+
+        if (on_frame) {
+          sol::function cb = on_frame.value();
+          if (cb.valid()) {
+            on_frame_callbacks[id] = cb;
+          }
+        }
+
+        if (on_signal) {
+          sol::function cb = on_signal.value();
+          if (cb.valid()) {
+            signal_listeners[id] = cb;
+          }
+        }
 
         if (type == "window") {
           RegisterWindow(table);
@@ -31,7 +48,26 @@ namespace LuaEngine {
 
       if (val.get_type() == sol::type::table) {
         sol::table t = val.as<sol::table>();
+
+        std::string id = t["id"];
         sol::optional<std::string> type = t["__widget_type"];
+
+        sol::optional<sol::function> on_frame = t["on_frame"];
+        sol::optional<sol::function> on_signal = t["on_signal"];
+
+        if (on_frame) {
+          sol::function cb = on_frame.value();
+          if (cb.valid()) {
+            on_frame_callbacks[id] = cb;
+          }
+        }
+
+        if (on_signal) {
+          sol::function cb = on_signal.value();
+          if (cb.valid()) {
+            signal_listeners[id] = cb;
+          }
+        }
 
         if (type && type.value() == "button") {
           RegisterButton(parent, t);

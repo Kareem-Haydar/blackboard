@@ -38,18 +38,6 @@ namespace LuaEngine {
     engine.AddWindow(info);
     engine.ShowWindow(info.name);
 
-    // handle on frame callback
-    sol::optional<sol::function> on_frame = args["on_frame"];
-    if (on_frame && on_frame.value().valid()) {
-      on_frame_callbacks[id] = on_frame.value();
-    }
-
-    // handle on signal callback
-    sol::optional<sol::function> on_signal = args["on_signal"];
-    if (on_signal && on_signal.value().valid()) {
-      signal_listeners[id] = on_signal.value();
-    }
-
     // make sure required fields are set
     sol::optional<std::string> widget_type = args["__widget_type"];
     if (!widget_type) {
@@ -60,13 +48,6 @@ namespace LuaEngine {
     if (!parent) {
       args.raw_set("parent", "");
     }
-
-    // register hooks
-    sol::optional<sol::table> hooks = args["hooks"];
-    if (hooks && hooks->valid()) {
-      
-    }
-
 
     // handle animation states
     HandleStates(args);

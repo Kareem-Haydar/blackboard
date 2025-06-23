@@ -1,35 +1,50 @@
 #!/bin/bash
 
-if [[ $1 == "clean" || $2 == "clean" || $3 == "clean" ]]; then
-  rm -r build
-  mkdir build
-  cd build
+BUILD_DIR="build"
+BINARY="./blackboard"
 
-  if [[ $1 == "debug" || $2 == "debug" || $3 == "debug" ]]; then
-    cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
+# Parse args
+DEBUG=false
+CLEAN=false
+RUN=false
+
+for arg in "$@"; do
+  case $arg in
+    debug) DEBUG=true ;;
+    clean) CLEAN=true ;;
+    run)   RUN=true ;;
+  esac
+done
+
+# Clean build
+if $CLEAN; then
+  rm -rf "$BUILD_DIR"
+fi
+
+# Configure if needed
+if [ ! -d "$BUILD_DIR" ]; then
+  mkdir "$BUILD_DIR"
+  cd "$BUILD_DIR"
+
+  if $DEBUG; then
+    cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1
   else
-    cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1
+    cmake .. -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1
   fi
+else
+  cd "$BUILD_DIR"
+fi
 
-  make
-else 
-  if [ ! -d "build" ]; then
-    mkdir build
-    cd build
+# Build
+cmake --build . --parallel
 
-    if [[ $1 == "debug" || $2 == "debug" || $3 == "debug" ]]; then
-      cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug
-    else 
-      cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1
-    fi
-
-    make
+# Run
+if $RUN; then
+  if [ -f "$BINARY" ]; then
+    $BINARY
   else
-    cd build
-    make
+    echo "❌ Binary not found: $BINARY"
+    exit 1
   fi
 fi
 
-if [[ $1 == "run" || $2 == "run" || $3 == "run" ]]; then
-  ./blackboard
-fi

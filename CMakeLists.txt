@@ -102,4 +102,6 @@ else()
 
     <QWidget>
   )
+
+  set_target_properties(blackboard PROPERTIES UNITY_BUILD ON)
 endif()

@@ -9,9 +9,18 @@ namespace LuaEngine {
 
       sol::table widget = widget_registry.find(caller_id)->second;
       std::string emitter_type = widget["__widget_type"];
+      std::string emitter_id = widget["id"];
 
-      userdata data = { widget["id"], emitter_type };
-      lua_signals[signal] = data;
+      signal_queue.push(std::make_pair(emitter_id, signal));
+
+      if (BL_DEBUG) {
+        std::cout << "\n";
+      }
+  }
+
+  void Engine::ProcessSignals() {
+    while (!signal_queue.empty()) {
+      std::pair<std::string, std::string> pair = signal_queue.front();
       for (const auto& kv : signal_listeners) {
         std::string id = kv.first;
 
@@ -26,11 +35,10 @@ namespace LuaEngine {
         }
 
         SetWidgetMetatable(self, id, listener_type, parent_str);
-        kv.second(self, signal, caller_id);
+        kv.second(self, pair.second, pair.first);
       }
 
-      if (BL_DEBUG) {
-        std::cout << "\n";
-      }
+      signal_queue.pop();
+    }
   }
 };

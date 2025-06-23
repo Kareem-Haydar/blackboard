@@ -8,6 +8,7 @@
 #include <LuaEngine/Structs.h>
 
 #include <filesystem>
+#include <queue>
 
 #pragma once
 
@@ -28,19 +29,24 @@ namespace LuaEngine {
 
       std::unordered_map<std::string, sol::function> on_frame_callbacks;
 
-      std::unordered_map<std::string, sol::function> widget_pre_hooks;
-      std::unordered_map<std::string, sol::function> widget_post_hooks;
+      std::unordered_map<std::string, std::vector<sol::table>> widget_pre_hooks;
+      std::unordered_map<std::string, std::vector<sol::table>> widget_post_hooks;
+      std::unordered_map<std::string, sol::table> animation_pre_hooks;
 
-      std::unordered_map<std::string, sol::table> global_pre_hooks;
-      std::unordered_map<std::string, sol::table> global_post_hooks;
+      std::unordered_map<std::string, std::vector<sol::table>> global_pre_hooks;
+      std::unordered_map<std::string, std::vector<sol::table>> global_post_hooks;
+      std::unordered_map<std::string, sol::table> animation_post_hooks;
 
       std::unordered_map<std::string, std::unordered_map<std::string, std::shared_ptr<PropertyAnimation>>> widget_animations;
 
       std::unordered_map<std::string, Widget> widgets;
+      std::queue<std::pair<std::string, std::string>> signal_queue;
 
       QTimer* frameTimer;
 
-      void RegisterHooks(const std::string& widget_id, sol::table hooks);
+      void RegisterHook(const std::string& widget_id, sol::table hook);
+
+      void ProcessHooks();
 
       void CallGlobalPreHooks(const std::string& fn_name);
       void CallWidgetPreHooks(const std::string& fn_name);
@@ -66,10 +72,12 @@ namespace LuaEngine {
       void RegisterLineEdit(const std::string& parent, sol::table args);
 
       void RegisterAnimation(const std::string& parent, const std::string& widget_id, sol::table args);
-
-      void HandleAnimations();
+      void RegisterAnimHook(const std::string& widget_id, const std::string& anim_id, bool interruptible, sol::table hook);
+      void CallAnimPreHooks(const std::string& fn_name);
+      void CallAnimPostHooks(const std::string& fn_name);
 
       void EmitSignal(const std::string& signal);
+      void ProcessSignals();
 
     public:
       Engine(int argc, char** argv);
