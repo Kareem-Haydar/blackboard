@@ -50,12 +50,14 @@ else()
     src/BlackboardConfig.cpp
 
     src/WidgetEngine/WidgetEngine.cpp
+    src/WidgetEngine/Layouts.cpp
     src/WidgetEngine/Monitors.cpp
     src/WidgetEngine/Animations.cpp
     src/WidgetEngine/Properties.cpp
     src/WidgetEngine/Widgets.cpp
 
     src/LuaEngine/LuaEngine.cpp
+    src/LuaEngine/Layouts.cpp
     src/LuaEngine/Animations.cpp
     src/LuaEngine/Bindings.cpp
     src/LuaEngine/Callbacks.cpp

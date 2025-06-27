@@ -45,7 +45,6 @@ namespace LuaEngine {
       QTimer* frameTimer;
 
       void RegisterHook(const std::string& widget_id, sol::table hook);
-
       void ProcessHooks();
 
       void CallGlobalPreHooks(const std::string& fn_name);
@@ -61,15 +60,20 @@ namespace LuaEngine {
 
       void ProcessTopLevelWidgets();
       void ProcessChildWidgets(sol::table widget, const std::string& parent);
-
-      void ProcessAnimations(sol::table widget, const std::string& parent);
+      void ProcessLayoutWidgets(sol::table layout, const std::string& parent);
 
       void HandleStates(sol::table args, const std::string& parent = "");
+      void ProcessAnimations(sol::table widget, const std::string& parent);
+
+      void RegisterHBoxLayout(const std::string& parent, sol::table args);
+      void RegisterVBoxLayout(const std::string& parent, sol::table args);
 
       void RegisterWindow(sol::table args);
-      void RegisterLabel(const std::string& parent, sol::table args);
-      void RegisterButton(const std::string& parent, sol::table args);
+      void RegisterLabel(const std::string& parent, sol::table args, bool layout = false);
+      void RegisterButton(const std::string& parent, sol::table args, bool layout = false);
       void RegisterLineEdit(const std::string& parent, sol::table args);
+
+      void RegisterWidgetList(const std::string& parent, sol::table args);
 
       void RegisterAnimation(const std::string& parent, const std::string& widget_id, sol::table args);
       void RegisterAnimHook(const std::string& widget_id, const std::string& anim_id, bool interruptible, sol::table hook);

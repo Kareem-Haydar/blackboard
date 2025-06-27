@@ -16,12 +16,6 @@ namespace LuaEngine {
       return;
     }
 
-    if (BL_DEBUG) {
-      std::cout << "PropertyAnimation called from " << widget_id << "\n";
-      std::cout << "\t start state: " << start.value() << "\n";
-      std::cout << "\t end state: " << end.value() << "\n";
-    }
-
 
     auto widget_states = states.find(widget_id);
     if (widget_states == states.end()) {
@@ -49,7 +43,11 @@ namespace LuaEngine {
 
     if (end_state_it->second->type == StateType::Size) {
       if (BL_DEBUG) {
-        std::cout << "\tsize animation\n";
+        std::cout << "registering property animation " << widget_id << "\n";
+        std::cout << "\t id: " << id.value() << "\n";
+        std::cout << "\t property: size\n";
+        std::cout << "\t start state: " << start.value() << "\n";
+        std::cout << "\t end state: " << end.value() << "\n";
       }
 
       QSize start_size;

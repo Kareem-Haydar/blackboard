@@ -50,6 +50,16 @@ namespace WidgetEngine {
     InOutCubic = QEasingCurve::InOutCubic
   };
 
+  enum SizePolicy {
+    Fixed = QSizePolicy::Fixed,
+    Minimum = QSizePolicy::Minimum,
+    Maximum = QSizePolicy::Maximum,
+    Preferred = QSizePolicy::Preferred,
+    Expanding = QSizePolicy::Expanding,
+    MinimumExpanding = QSizePolicy::MinimumExpanding,
+    Ignored = QSizePolicy::Ignored,
+  };
+
   struct WindowInfo {
     std::string name;
     int screen;
@@ -61,6 +71,8 @@ namespace WidgetEngine {
     unsigned int paddingOuter = 0;
     unsigned int paddingInner = 0;
     int anchorZone;
+    SizePolicy horizontal = SizePolicy::Preferred;
+    SizePolicy vertical = SizePolicy::Preferred;
     WindowLayout layout = WindowLayout::HorizontalBox;
   };
 
@@ -71,14 +83,20 @@ namespace WidgetEngine {
     std::function<void()> hoverEnter;
     std::function<void()> hoverLeave;
     WidgetAlignment alignment;
+    SizePolicy horizontal = SizePolicy::Preferred;
+    SizePolicy vertical = SizePolicy::Preferred;
     bool elevated;
+    bool layout;
   };
 
   struct LabelInfo {
     std::string name;
     std::string text;
     WidgetAlignment allignment;
+    SizePolicy horizontal = SizePolicy::Preferred;
+    SizePolicy vertical = SizePolicy::Preferred;
     bool elevated;
+    bool layout;
   };
 
   struct WindowHandle {

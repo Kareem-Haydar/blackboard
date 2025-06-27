@@ -10,6 +10,10 @@ namespace LuaEngine {
       end
     )");
 
+    if (BL_DEBUG) {
+      std::cout << "running lua file: " << file << "\n" << std::endl;
+    }
+
     try {
       lua.script_file(file);
       lua.script("__process_widgets()");
@@ -33,6 +37,10 @@ namespace LuaEngine {
 
     for (const auto& entry : std::filesystem::directory_iterator(scriptPath)) {
       if (entry.path().extension() == ".lua") {
+        if (BL_DEBUG) {
+          std::cout << "running lua file: " << entry.path().string() << "\n";
+        }
+
         try {
           lua.script_file(entry.path().string());
         } catch (const sol::error& err) {
@@ -41,7 +49,11 @@ namespace LuaEngine {
       }
     }
 
+    std::cout << "\n";
+
     lua.script("__process_widgets()");
+
+    std::cout << "processing hooks\n";
     ProcessHooks();
 
     frameTimer->start(1000 / 120);
@@ -91,7 +103,6 @@ namespace LuaEngine {
       function Window (args)
         args = args or {}
         args.__widget_type = "window"
-        args.id = args.id or ("window_" .. tostring(#__widget_list + 1))
         table.insert(__widget_list, args)
 
         return args
@@ -100,7 +111,6 @@ namespace LuaEngine {
       function Button (args)
         args = args or {}
         args.__widget_type = "button"
-        args.id = args.id or ("button_" .. tostring(#__widget_list + 1))
         table.insert(__widget_list, args)
 
         return args
@@ -109,7 +119,6 @@ namespace LuaEngine {
       function Label (args)
         args = args or {}
         args.__widget_type = "label"
-        args.id = args.id or ("label_" .. tostring(#__widget_list + 1))
         table.insert(__widget_list, args)
 
         return args
@@ -118,7 +127,6 @@ namespace LuaEngine {
       function LineEdit (args)
         args = args or {}
         args.__widget_type = "line_edit"
-        args.id = args.id or ("line_edit_" .. tostring(#__widget_list + 1))
         table.insert(__widget_list, args)
 
         return args
@@ -126,7 +134,27 @@ namespace LuaEngine {
 
       function PropertyAnimation (args)
         args = args or {}
-        args.__widget_type = "property_animation"
+
+        return args
+      end
+
+      function HBox (args)
+        args = args or {}
+        args.__widget_type = "hbox_layout"
+
+        return args
+      end
+
+      function VBox (args)
+        args = args or {}
+        args.__widget_type = "vbox_layout"
+
+        return args
+      end
+
+      function WidgetList (args)
+        args = args or {}
+        args.__widget_type = "widget_list"
 
         return args
       end

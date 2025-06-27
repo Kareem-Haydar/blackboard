@@ -52,8 +52,10 @@ namespace WidgetEngine {
 
   WidgetEngine::WindowHandle* Engine::GetWindow(const std::string& name) {
     auto it = windows.find(name);
-    if (it != windows.end() && it->second->window && it->second->window->isWindow()) {
-      return it->second.get();
+    if (it != windows.end() && it->second) {
+      if (it->second->window && it->second->window->isWindow()) {
+        return it->second.get();
+      }
     }
     return nullptr;
   }
@@ -100,6 +102,15 @@ namespace WidgetEngine {
     WidgetEngine::WindowHandle* handle = GetWindow(name);
     if (handle && handle->window && handle->window->isWindow()) {
       handle->window->resize(width, height);
+    }
+  }
+
+  void Engine::SetWidgetSizePolicy(const std::string& window, const std::string& name, SizePolicy horizontal, SizePolicy vertical) {
+    WidgetEngine::WindowHandle* handle = GetWindow(window);
+    if (handle && handle->window && handle->window->isWindow()) {
+      if (auto* widget = handle->window->findChild<QWidget*>(QString::fromStdString(name))) {
+        widget->setSizePolicy(QSizePolicy(static_cast<QSizePolicy::Policy>(horizontal), static_cast<QSizePolicy::Policy>(vertical)));
+      }
     }
   }
 };

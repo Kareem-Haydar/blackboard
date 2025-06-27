@@ -1,10 +1,13 @@
 #include <LuaEngine/LuaEngine.h>
 
 namespace LuaEngine {
-  void Engine::RegisterButton(const std::string& parent, sol::table args) {
-    // get required fields
+  void Engine::RegisterButton(const std::string& parent, sol::table args, bool layout) {
     std::string id = args.get_or("id", std::string(""));
     std::string text = args.get_or("text", std::string("Button"));
+    sol::optional<sol::table> size_policy = args["size_policy"];
+    sol::optional<sol::function> on_click = args["on_click"];
+    sol::optional<sol::function> hover_enter = args["hover_enter"];
+    sol::optional<sol::function> hover_leave = args["hover_leave"];
 
     if (BL_DEBUG) {
       std::cout << "registering button " << id << " with parent " << parent << "\n";
@@ -12,17 +15,10 @@ namespace LuaEngine {
       std::cout << "\n";
     }
 
-    // get callbacks
-    sol::optional<sol::function> on_frame = args["on_frame"];
-    sol::optional<sol::function> on_signal = args["on_signal"];
-    sol::optional<sol::function> on_click = args["on_click"];
-    sol::optional<sol::function> hover_enter = args["hover_enter"];
-    sol::optional<sol::function> hover_leave = args["hover_leave"];
-
     // make sure required fields are set
     sol::optional<std::string> widget_type = args["__widget_type"];
     if (!widget_type) {
-      args.raw_set("__widget_type", "window");
+      args.raw_set("__widget_type", "button");
     }
 
     args.raw_set("parent", parent);
@@ -107,6 +103,7 @@ namespace LuaEngine {
     };
 
     WidgetEngine::ButtonInfo info;
+
     info.name = id;
     info.text = text;
     info.onClick = fn_on_click;
@@ -114,15 +111,28 @@ namespace LuaEngine {
     info.hoverLeave = fn_hover_leave;
     info.alignment = WidgetEngine::WidgetAlignment::AlignmentNone;
     info.elevated = false;
+    info.layout = layout;
+
+    if (size_policy) {
+      sol::table tbl = size_policy.value();
+      sol::optional<WidgetEngine::SizePolicy> horizontal = tbl["horizontal"];
+      sol::optional<WidgetEngine::SizePolicy> vertical = tbl["vertical"];
+
+      if (horizontal) {
+        info.horizontal = horizontal.value();
+      }
+      if (vertical) {
+        info.vertical = vertical.value();
+      }
+    }
 
     engine.AddButton(parent, info);
-
-    HandleStates(args, parent);
-    SetWidgetMetatable(args, id, "button", parent, true);
 
     // add widget to global registry
     widget_registry[id] = args;
 
+    HandleStates(args, parent);
+    SetWidgetMetatable(args, id, "button", parent, true);
     ProcessAnimations(args, parent);
   }
 }

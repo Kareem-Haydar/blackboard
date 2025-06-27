@@ -73,6 +73,12 @@ namespace LuaEngine {
         std::string hook_fn_name = hook["fn_name"];
 
         if (hook_fn_name == fn_name && caller_id == widget_id) {
+          if (BL_DEBUG) {
+            std::cout << "\t calling pre hook for " << widget_id << "\n";
+            std::cout << "\t fn_name: " << hook_fn_name << "\n";
+            std::cout << "\n";
+          }
+
           sol::table self = widget_registry[kv.first];
           sol::protected_function_result result = cb(self);
           if (!result.valid()) {
@@ -83,6 +89,8 @@ namespace LuaEngine {
         }
       }
     }
+
+    std::cout << "\n";
   }
 
   void Engine::CallWidgetPostHooks(const std::string& fn_name) {
@@ -97,6 +105,12 @@ namespace LuaEngine {
         std::string widget_id = hook["widget"];
 
         if (hook_fn_name == fn_name && caller_id == widget_id) {
+          if (BL_DEBUG) {
+            std::cout << "\t calling post hook for " << widget_id << "\n";
+            std::cout << "\t fn_name: " << hook_fn_name << "\n";
+            std::cout << "\n";
+          }
+
           sol::table self = widget_registry[kv.first];
           sol::protected_function_result result = cb(self);
           if (!result.valid()) {
@@ -107,5 +121,7 @@ namespace LuaEngine {
         }
       }
     }
+
+    std::cout << "\n";
   }
 }

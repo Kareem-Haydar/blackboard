@@ -2,6 +2,10 @@
 
 namespace LuaEngine {
   void Engine::RegisterBindings() {
+    if (BL_DEBUG) {
+      std::cout << "Registering lua bindings\n" << std::endl;
+    }
+
     sol::object debug = sol::make_object(lua, BL_DEBUG);
     lua["__debug"] = debug;
 
@@ -41,6 +45,16 @@ namespace LuaEngine {
       "in_out_cubic", WidgetEngine::AnimCurve::InOutCubic
     );
 
+    lua["size_policy"] = lua.create_table_with(
+      "fixed", WidgetEngine::SizePolicy::Fixed,
+      "expanding", WidgetEngine::SizePolicy::Expanding,
+      "preferred", WidgetEngine::SizePolicy::Preferred,
+      "maximum", WidgetEngine::SizePolicy::Maximum,
+      "minimum", WidgetEngine::SizePolicy::Minimum,
+      "minimum_expanding", WidgetEngine::SizePolicy::MinimumExpanding,
+      "ignored", WidgetEngine::SizePolicy::Ignored
+    );
+
     lua["mouse_button"] = lua.create_table_with(
       "none", Qt::NoButton,
       "left", Qt::LeftButton,
@@ -65,11 +79,11 @@ namespace LuaEngine {
     );
 
     lua.set_function("__process_widgets", [this]() {
-      if (BL_DEBUG) {
-        std::cout << "processing " << widget_registry.size() << " widgets\n";
-      }
-
       ProcessTopLevelWidgets();
+
+      if (BL_DEBUG) {
+        std::cout << "processed " << widget_registry.size() << " widgets\n";
+      }
     });
 
     lua.set_function("animate_once", [this](sol::table args) {
